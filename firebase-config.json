@@ -8,7 +8,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyAEAlL33IzFKePlXzNQr2Uv2bd2nzw5xko",
   authDomain: "himnario-782ce.firebaseapp.com",
   databaseURL: "https://himnario-782ce-default-rtdb.firebaseio.com",
-  projectId: "himnario-782ce",
+ projectId: "himnario-782ce",
   storageBucket: "himnario-782ce.firebasestorage.app",
   messagingSenderId: "663004510592",
   appId: "1:663004510592:web:785ba80ab843a162672965"
