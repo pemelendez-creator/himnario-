@@ -1724,6 +1724,7 @@ function showApp(){
     updateAppBadge(0);
   }
 
+  maybeDailyBackup();
   renderAll();
 }
 
@@ -4660,10 +4661,115 @@ function csvEscape(value){
    El admin elige exactamente qué borrar, con filtros por fecha.
    ═══════════════════════════════════════════════════════════════════ */
 
+/* ===================== RESPALDOS (para poder deshacer) =====================
+   Guarda una copia de despachos y devoluciones en Firestore:
+   respaldos/{id} (resumen) + respaldosPartes/{id}_{n} (datos en trozos < 1 MB).
+   - Automático una vez al día al entrar logística.
+   - Siempre antes de "Limpiar datos". */
+function _allDispatchesFlat(){
+  var out = [];
+  Object.keys(state.dispatches||{}).forEach(function(k){
+    (state.dispatches[k]||[]).forEach(function(d){ out.push(Object.assign({}, d, {date: d.date || k})); });
+  });
+  return out;
+}
+function makeBackup(motivo){
+  if(storageMode !== "firebase" || !FBApi.isAvailable()) return Promise.resolve(null);
+  var now = new Date();
+  var id = iso(now) + "_" + String(now.getHours()).padStart(2,"0") + String(now.getMinutes()).padStart(2,"0")
+    + String(now.getSeconds()).padStart(2,"0") + "_" + (motivo === "diario" ? "diario" : "limpieza");
+  var payload = JSON.stringify({despachos: _allDispatchesFlat(), devoluciones: state.returns || []});
+  var CH = 700000, parts = [];
+  for(var i = 0; i < payload.length; i += CH) parts.push(payload.slice(i, i + CH));
+  var jobs = parts.map(function(txt, n){
+    return FBApi.setDocument("respaldosPartes", id + "_" + n, {backupId: id, n: n, data: txt});
+  });
+  return Promise.all(jobs).then(function(){
+    return FBApi.setDocument("respaldos", id, {
+      fecha: iso(now), creado: now.toISOString(), motivo: motivo, por: currentUser || "",
+      partes: parts.length, despachos: _allDispatchesFlat().length, devoluciones: (state.returns||[]).length
+    });
+  }).then(function(){ return id; });
+}
+/* Respaldo diario automático (solo la cuenta de logística, 1 escritura al día) */
+function maybeDailyBackup(){
+  if(!isAdmin() || storageMode !== "firebase" || !FBApi.isAvailable()) return;
+  var key = "sps_ultimo_respaldo", hoy = todayStr();
+  try{ if(localStorage.getItem(key) === hoy) return; }catch(e){}
+  setTimeout(function(){
+    if(!_allDispatchesFlat().length && !(state.returns||[]).length) return;   // nada que respaldar
+    makeBackup("diario").then(function(id){
+      try{ localStorage.setItem(key, hoy); }catch(e){}
+      console.log("[Respaldo] Diario guardado:", id);
+    }).catch(function(e){ console.warn("[Respaldo] No se pudo guardar:", e.message); });
+  }, 8000);
+}
+function listBackups(){
+  var col = window.FB.collection(window.FB.db, "respaldos");
+  return window.FB.getDocs(col).then(function(snap){
+    var out = [];
+    snap.forEach(function(d){ out.push(Object.assign({id: d.id}, d.data())); });
+    return out.sort(function(a,b){ return a.creado < b.creado ? 1 : -1; });
+  });
+}
+/* Restaura: vuelve a crear los despachos y devoluciones del respaldo que YA NO existen.
+   No toca ni duplica los que siguen en la app. */
+function restoreBackup(id){
+  if(!isAdmin()) return;
+  var b = (window._backupsCache || []).filter(function(x){ return x.id === id; })[0];
+  if(!b) return;
+  if(!confirm("Restaurar el respaldo del " + b.fecha + " (" + b.motivo + ")\n\n"
+    + "Se volverán a crear los despachos y devoluciones de ese respaldo que ya no estén en la app.\n"
+    + "Los que existen hoy no se modifican.\n\n¿Continuar?")) return;
+  var jobs = [];
+  for(var n = 0; n < (b.partes||1); n++){
+    jobs.push(window.FB.getDoc(window.FB.doc(window.FB.db, "respaldosPartes", id + "_" + n)).then(function(sn){ return sn.exists() ? sn.data() : null; }));
+  }
+  Promise.all(jobs).then(function(parts){
+    if(parts.some(function(x){ return !x; })) throw new Error("El respaldo está incompleto.");
+    parts.sort(function(a,b){ return a.n - b.n; });
+    var data = JSON.parse(parts.map(function(x){ return x.data; }).join(""));
+    var existentes = {};
+    _allDispatchesFlat().forEach(function(d){ existentes[d.id] = 1; });
+    var retEx = {}; (state.returns||[]).forEach(function(r){ retEx[r.id] = 1; });
+    var w = [], nd = 0, nr = 0;
+    (data.despachos||[]).forEach(function(d){
+      if(!d.id || existentes[d.id]) return;
+      var doc = Object.assign({}, d); delete doc.id; delete doc._id;
+      w.push(FBApi.setDocument("despachos", d.id, doc)); nd++;
+    });
+    (data.devoluciones||[]).forEach(function(r){
+      if(!r.id || retEx[r.id]) return;
+      var doc = Object.assign({}, r); delete doc.id; delete doc._id;
+      w.push(FBApi.setDocument("devoluciones", r.id, doc)); nr++;
+    });
+    return Promise.all(w).then(function(){
+      alert("✅ Respaldo restaurado\n\n  " + nd + " despachos recuperados\n  " + nr + " devoluciones recuperadas");
+      closeOv("ovCleanup");
+    });
+  }).catch(function(e){ alert("❌ No se pudo restaurar: " + e.message); });
+}
+function renderBackupsBox(){
+  var box = document.getElementById("backupsBox");
+  if(!box) return;
+  if(storageMode !== "firebase"){ box.innerHTML = ""; return; }
+  box.innerHTML = '<div style="color:var(--muted);font-size:13px">Cargando respaldos…</div>';
+  listBackups().then(function(list){
+    window._backupsCache = list;
+    if(!list.length){ box.innerHTML = '<div style="font-size:13px;color:var(--muted)">Aún no hay respaldos. Se crea uno automático cada día al entrar con la cuenta de logística.</div>'; return; }
+    box.innerHTML = list.slice(0, 15).map(function(b){
+      return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:13px">'
+        + '<span><strong>' + esc(b.fecha) + '</strong> · ' + esc(b.motivo) + ' · ' + fmtNum(b.despachos||0) + ' despachos, ' + fmtNum(b.devoluciones||0) + ' devoluciones</span>'
+        + '<button class="btn ghost sm" onclick="restoreBackup(\'' + esc(b.id) + '\')">Restaurar</button></div>';
+    }).join("");
+  }).catch(function(e){ box.innerHTML = '<div style="font-size:13px;color:var(--danger)">No se pudieron cargar los respaldos: ' + esc(e.message) + '</div>'; });
+}
+
 function promptReset(){
   if(!isAdmin()){alert("Solo un administrador puede limpiar datos."); return;}
   document.getElementById("ovCleanup").classList.add("show");
   renderCleanupPanel();
+  renderBackupsBox();
 }
 
 /* Cuenta despachos anteriores a una fecha (o todos si no se da fecha) */
@@ -4712,6 +4818,9 @@ function renderCleanupPanel(){
   var nTemp = Object.keys(state.archivedSeasons||{}).length;
 
   var html = ''
+    + '<div style="border:1px solid #bfe3cc;background:#effaf3;border-radius:10px;padding:12px 14px;margin-bottom:14px">'
+    + '<div style="font-weight:700;color:#1f5c3b;margin-bottom:6px">🛟 Respaldos (para deshacer)</div>'
+    + '<div id="backupsBox"></div></div>'
     + '<p style="font-size:13px;color:var(--muted);margin-bottom:16px">'
     + 'Marca solo lo que quieras eliminar. Lo que no marques queda intacto. '
     + 'Los <strong>' + state.farmers.length + ' agricultores</strong> y la configuración de camiones nunca se borran desde aquí.'
@@ -4935,6 +5044,23 @@ async function executeCleanup(){
   if(plan.seasons) resumen.push("  • Historial de temporadas");
 
   if(!confirm("Se eliminarán definitivamente:\n\n" + resumen.join("\n") + "\n\n¿Confirmar?")) return;
+  // Despachos de hoy o futuros: doble confirmación escribiendo BORRAR
+  var hoyC = todayStr();
+  var futuros = plan.dispatches.filter(function(x){ return (x.date||"") >= hoyC; }).length;
+  if(futuros){
+    var t = prompt("⚠ " + futuros + " de esos despachos son de HOY o días FUTUROS (pedidos que aún no se despachan).\n\n"
+      + "Para confirmar, escribe BORRAR:");
+    if(String(t||"").trim().toUpperCase() !== "BORRAR"){ alert("Limpieza cancelada. No se borró nada."); return; }
+  }
+  // Respaldo obligatorio antes de borrar
+  if(storageMode === "firebase" && (plan.dispatches.length || plan.returns.length)){
+    try{
+      await makeBackup("antes de limpieza");
+    }catch(e){
+      alert("❌ No se pudo crear el respaldo previo (" + e.message + "). Por seguridad no se borró nada.");
+      return;
+    }
+  }
 
   var loading = document.createElement("div");
   loading.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:600;z-index:99999;text-align:center;padding:20px";
