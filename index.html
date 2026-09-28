@@ -235,6 +235,17 @@
   .day .dblock{position:absolute;top:4px;right:5px;font-size:11px}
   .daynote{margin-top:12px;padding:12px 14px;border-radius:10px;background:#eef2f7;color:#334155;font-size:14px}
   .daynote.blocked{background:#fdecea;color:#8a1c14}
+  .vsel{font-size:12px;padding:3px 6px;border-radius:6px;border:1px solid var(--line);background:var(--navy);color:#fff;font-weight:700;max-width:220px}
+  .findone{margin-top:10px;border:1px solid #cfe8d9;background:#f3fbf6;border-radius:10px;padding:8px 12px}
+  .findone summary{cursor:pointer;font-weight:700;color:#1f5c3b;font-size:13.5px}
+  .hrow{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;padding:9px 2px;border-bottom:1px solid var(--line);font-size:13px}
+  .hrow .hdate{color:var(--muted);font-size:12px;margin-left:6px}
+  .hrow .hsub{color:var(--muted);font-size:12px;margin-top:2px}
+  .hrow .hacts{display:flex;gap:10px;flex-wrap:wrap;white-space:nowrap}
+  .hrow .hacts a{color:var(--blue);font-weight:600;text-decoration:none}
+  .hfilters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .hfilters input[type=text],.hfilters #h_q{flex:1;min-width:180px}
+  .hfilters label{font-size:12px;color:var(--muted);display:flex;gap:4px;align-items:center}
   .editbar{background:#fff4e2;color:#7a4a00;border-radius:9px;padding:10px 12px;font-size:13px;margin-bottom:8px}
   .entrega{margin-top:8px;border-radius:9px;padding:8px 10px;font-size:12.5px}
   .entrega.route{background:#fff4e2;color:#7a4a00}
@@ -567,6 +578,7 @@
       <button class="btn primary sm" onclick="openOutlook()" id="t_bmail">📧 Enviar pendientes (Outlook)</button>
       <button class="btn ghost sm" id="outlookWebBtn" onclick="openOutlookWeb()" title="Abre Outlook Web en el navegador (útil si el Outlook de escritorio no responde)">🌐 Outlook Web</button>
       <button class="btn success sm" onclick="markPendingSent()" id="t_bmark">Marcar como enviados</button>
+      <button class="btn ghost sm" onclick="openHistory()" title="Despachos finalizados">📚 Historial</button>
       <button class="btn warn sm" onclick="openReturnsPanel()" title="Registrar bandejas devueltas por los agricultores">📦 Recuperación de bandejas</button>
       <button class="btn ghost sm" onclick="openConfig()" id="t_bcfg">Configuración</button>
       <button class="btn ghost sm" onclick="openFarmers()" id="t_bfarm">Agricultores</button>
@@ -616,6 +628,15 @@
     <button class="x" onclick="closeOv('ovNotif')">×</button>
   </div>
   <div class="mb" id="notifBody"></div>
+</div></div>
+
+<!-- Historial de despachos finalizados -->
+<div class="ov" id="ovHist"><div class="modal" style="max-width:980px">
+  <div class="mh">
+    <h3>📚 Historial de despachos finalizados</h3>
+    <button class="x" onclick="closeOv('ovHist')">×</button>
+  </div>
+  <div class="mb" id="histBody"></div>
 </div></div>
 
 <!-- Fotos del chofer -->
@@ -1091,9 +1112,11 @@ function defaultConfig(){
     depot:{name:"Bodega SPS — San Vicente de T.T.", lat:-34.4389, lng:-71.0817},
     sinuosity:1.4,
     trucks:[
-      {id:"big",  name:"Camión Grande", capacity:500, dayStart:"08:00", dayEnd:"18:00", speed:55, loadMin:30, unloadMin:20},
-      {id:"small",name:"Camión Chico",  capacity:300, dayStart:"08:00", dayEnd:"18:00", speed:55, loadMin:30, unloadMin:20}
-    ]
+      {id:"big",  name:"Camión Grande", capacity:500, dayStart:"08:00", dayEnd:"18:00", speed:55, loadMin:30, unloadMin:20, tipo:"camion"},
+      {id:"small",name:"Camión Chico",  capacity:300, dayStart:"08:00", dayEnd:"18:00", speed:55, loadMin:30, unloadMin:20, tipo:"camion"},
+      {id:"pickup",name:"Camioneta",    capacity:60,  dayStart:"08:00", dayEnd:"18:00", speed:60, loadMin:15, unloadMin:10, tipo:"camioneta"}
+    ],
+    vehiclesV2: true
   };
 }
 
@@ -1305,6 +1328,7 @@ function setupRealtimeSync(){
 
     // Detectar despachos nuevos de otros usuarios y avisar
     checkNewDispatchAlerts(flat, fromCache);
+    if(!fromCache) autoFinalizeFromEntregas();
 
     if(currentUser){
       renderAll();
@@ -1321,6 +1345,7 @@ function setupRealtimeSync(){
     items.forEach(function(e){ map[e._id] = Object.assign({}, e, {token: e._id}); });
     state.entregas = map;
     checkEntregaAlerts(items);
+    autoFinalizeFromEntregas();
     if(currentUser && selDate) renderPanel();
   }));
 
@@ -1378,7 +1403,8 @@ function setupRealtimeSync(){
   // === Camiones / bodega (compartido entre todos) y días bloqueados ===
   _realtimeUnsubs.push(FBApi.subscribeConfig("app", function(cfg){
     if(cfg && cfg.config && cfg.config.trucks){
-      state.config = Object.assign(defaultConfig(), cfg.config);
+      state.config = Object.assign(defaultConfig(), cfg.config, {vehiclesV2: !!cfg.config.vehiclesV2});
+      migrateVehicles(state.config);
       if(currentUser) renderAll();
     }
   }));
@@ -1435,6 +1461,7 @@ async function saveState(){
 function normalizeState(){
   if(!state.config) state.config = defaultConfig();
   if(!state.config.trucks) state.config.trucks = defaultConfig().trucks;
+  migrateVehicles(state.config);
   if(!state.farmers) state.farmers = [];
   if(!state.dispatches) state.dispatches = {};
   if(!state.returns) state.returns = [];
@@ -1775,13 +1802,28 @@ function logout(){
 
 /* ============================ Geo & time logic ============================ */
 function truckById(id){return state.config.trucks.filter(function(t){return t.id===id;})[0]||null;}
+/* Agrega la camioneta a configuraciones antiguas (solo una vez) */
+function migrateVehicles(c){
+  if(!c || c.vehiclesV2) return;
+  (c.trucks||[]).forEach(function(t){ if(!t.tipo) t.tipo = "camion"; });
+  if(!(c.trucks||[]).some(function(t){ return t.id === "pickup"; })){
+    c.trucks.push({id:"pickup",name:"Camioneta",capacity:60,dayStart:"08:00",dayEnd:"18:00",speed:60,loadMin:15,unloadMin:10,tipo:"camioneta"});
+  }
+  c.vehiclesV2 = true;
+}
+/* Camiones que salen juntos en "convoy" (no incluye camionetas) */
+function convoyTrucks(){
+  var c = state.config.trucks.filter(function(t){ return (t.tipo||"camion") === "camion"; });
+  return c.length ? c : state.config.trucks.slice();
+}
 function bestSingleByCap(n){
   var ts = state.config.trucks.slice().sort(function(a,b){return a.capacity-b.capacity;});
   for(var i=0;i<ts.length;i++) if(ts[i].capacity>=n) return ts[i].id;
   return ts[ts.length-1].id;
 }
-function maxConvoy(){return state.config.trucks.reduce(function(s,t){return s+(+t.capacity||0);},0);}
+function maxConvoy(){return convoyTrucks().reduce(function(s,t){return s+(+t.capacity||0);},0);}
 function workdayMin(t){
+  if(!t || !t.dayStart || !t.dayEnd) return 0;
   var a=t.dayStart.split(":"), b=t.dayEnd.split(":");
   return (b[0]*60 + +b[1]) - (a[0]*60 + +a[1]);
 }
@@ -1809,16 +1851,33 @@ function tripCost(f,t){
   if(tv==null) tv = defaultTravelMin();   // sin ubicación: se asume un viaje estándar
   return (+t.loadMin||0)+2*tv+(+t.unloadMin||0);
 }
-function usedMin(arr,truckId){
-  var s=0;
+/* Viajes de un vehículo en el día. Los despachos al MISMO agricultor en el mismo
+   vehículo van en el mismo viaje (se suman las bandejas; si pasan la capacidad,
+   se cuentan los viajes necesarios). */
+function truckTripGroups(arr, truckId){
+  var t = truckById(truckId), cap = t ? (+t.capacity || 1) : 1, g = {};
   (arr||[]).forEach(function(d){
-    if((d.truckIds||[]).indexOf(truckId)>=0){
-      var f=farmerById(d.farmerId);
-      var t=truckById(truckId);
-      s+=tripCost(f,t);
-    }
+    var ids = d.truckIds || [];
+    if(ids.indexOf(truckId) < 0) return;
+    var key = d.farmerId || d.farmerName || d.id;
+    if(!g[key]) g[key] = {farmerId: d.farmerId, trays: 0};
+    g[key].trays += (+d.trays || 0) / Math.max(1, ids.length);   // en convoy se reparte
   });
-  return s;
+  return Object.keys(g).map(function(k){
+    return {farmerId: g[k].farmerId, trips: Math.max(1, Math.ceil(g[k].trays / cap - 1e-9))};
+  });
+}
+function usedMin(arr,truckId){
+  var t = truckById(truckId); if(!t) return 0;
+  return truckTripGroups(arr, truckId).reduce(function(s, gr){
+    return s + tripCost(farmerById(gr.farmerId), t) * gr.trips;
+  }, 0);
+}
+/* ¿Cabe un despacho más en este vehículo? (considera juntarlo con el mismo agricultor) */
+function fitsOnTruck(arr, farmerId, trays, truckId, nTrucks){
+  var t = truckById(truckId); if(!t) return false;
+  var extra = arr.concat([{id:"_nuevo", farmerId: farmerId, trays: trays, truckIds: nTrucks > 1 ? new Array(nTrucks).fill(truckId) : [truckId]}]);
+  return usedMin(extra, truckId) <= workdayMin(t);
 }
 /* Despachos del día sin contar el que se está editando (para no descontarlo dos veces) */
 function dayArr(date){
@@ -1827,7 +1886,7 @@ function dayArr(date){
   return arr;
 }
 function remMin(arr,truckId){var t=truckById(truckId);return workdayMin(t)-usedMin(arr,truckId);}
-function tripCountToday(arr,truckId){return (arr||[]).filter(function(d){return (d.truckIds||[]).indexOf(truckId)>=0;}).length;}
+function tripCountToday(arr,truckId){return truckTripGroups(arr,truckId).reduce(function(s,g){return s+g.trips;},0);}
 function farmerById(id){return state.farmers.filter(function(f){return f.id===id;})[0]||null;}
 
 function suggest(date,trays,farmerId){
@@ -1844,24 +1903,58 @@ function suggest(date,trays,farmerId){
     res.reasons.push(fmtL("sgCapBig",{C:maxConvoy()}));
     return res;
   }
+  // 1) Si ese agricultor ya tiene despacho ese día, se completa el MISMO vehículo si cabe
+  var prev = arr.filter(function(d){ return d.farmerId === farmerId && (d.truckIds||[]).length === 1; });
+  for(var j=0;j<prev.length;j++){
+    var tp = truckById(prev[j].truckIds[0]);
+    if(!tp) continue;
+    var yaCarga = prev.filter(function(d){ return d.truckIds[0] === tp.id; }).reduce(function(s2,d){ return s2 + (+d.trays||0); }, 0);
+    if(yaCarga + trays <= tp.capacity){
+      res.mode="single"; res.truckIds=[tp.id]; res.sameTrip = true; res.yaCarga = yaCarga; return res;
+    }
+  }
+  // 2) El vehículo más chico donde quepa (así pocas bandejas van en camioneta)
   var singles = state.config.trucks.slice().sort(function(a,b){return a.capacity-b.capacity;});
   for(var i=0;i<singles.length;i++){
     var t = singles[i];
-    if(t.capacity>=trays){
-      var c = tripCost(f,t);
-      if(remMin(arr,t.id)>=c){res.mode="single";res.truckIds=[t.id];return res;}
-    }
+    if(t.capacity>=trays && fitsOnTruck(arr, farmerId, trays, t.id, 1)){res.mode="single";res.truckIds=[t.id];return res;}
   }
   var capOk = singles.some(function(t){return t.capacity>=trays;});
   if(capOk) res.reasons.push(L("sgNoTime"));
   if(trays<=maxConvoy()){
-    var allFit = state.config.trucks.every(function(t){
-      return remMin(arr,t.id)>=tripCost(f,t);
-    });
-    if(allFit){res.mode="convoy";res.truckIds=state.config.trucks.map(function(t){return t.id;});res.reasons=[];return res;}
+    var ct = convoyTrucks();
+    var allFit = ct.every(function(t){ return fitsOnTruck(arr, farmerId, trays, t.id, ct.length); });
+    if(allFit){res.mode="convoy";res.truckIds=ct.map(function(t){return t.id;});res.reasons=[];return res;}
   }
   if(!res.reasons.length) res.reasons.push(L("sgNoTruck"));
   return res;
+}
+
+/* Cambio rápido de vehículo desde la tarjeta (solo logística) */
+function vehicleQuickSelect(ds, d){
+  var ids = d.truckIds || [], cur = !ids.length ? "retiro" : (ids.length > 1 ? "convoy" : ids[0]);
+  var h = '<select class="vsel" title="Cambiar vehículo" onchange="changeVehicle(\''+ds+'\',\''+d.id+'\',this.value)">';
+  state.config.trucks.forEach(function(t){
+    h += '<option value="'+esc(t.id)+'"'+(cur===t.id?' selected':'')+'>🚚 '+esc(t.name)+' ('+t.capacity+')</option>';
+  });
+  if(ids.length && !truckById(ids[0]) && ids.length === 1) h += '<option value="'+esc(ids[0])+'" selected>'+esc(ids[0])+' (eliminado)</option>';
+  h += '<option value="convoy"'+(cur==="convoy"?' selected':'')+'>🚚 Convoy</option>'
+    + '<option value="retiro"'+(cur==="retiro"?' selected':'')+'>🚜 Retira agricultor</option></select>';
+  return h;
+}
+function changeVehicle(ds, id, val){
+  if(!isAdmin()) return;
+  var d = (state.dispatches[ds]||[]).filter(function(x){ return x.id === id; })[0];
+  if(!d) return;
+  var ids = val === "retiro" ? [] : (val === "convoy" ? convoyTrucks().map(function(t){ return t.id; }) : [val]);
+  var t = truckById(val);
+  if(t && +d.trays > +t.capacity && !confirm(t.name + " lleva " + t.capacity + " bandejas y este despacho tiene " + d.trays + ". ¿Cambiar igual? (harán falta varios viajes)")){ renderPanel(); return; }
+  var upd = {truckIds: ids, retiroAgricultor: val === "retiro", updatedAt: new Date().toISOString(), updatedBy: currentUser};
+  Object.assign(d, upd);
+  if(storageMode === "firebase" && FBApi.isAvailable()){
+    FBApi.updateDocument("despachos", id, upd).catch(function(e){ alert("❌ No se pudo cambiar el vehículo: " + e.message); });
+  } else saveState();
+  renderAll();
 }
 
 /* ============================ Bloqueo de días ============================ */
@@ -1956,13 +2049,12 @@ function dayTrays(arr){return (arr||[]).reduce(function(s,d){return s+(+d.trays|
 function dayLimit(){ var v = +(state.config && state.config.maxTraysPerDay); return v > 0 ? v : 800; }
 
 function renderStats(){
-  var keys = Object.keys(state.dispatches).filter(function(k){return (state.dispatches[k]||[]).length;});
+  var keys = Object.keys(state.dispatches).filter(function(k){return pendingOf(k).length;});
   var trays=0, trips=0;
   keys.forEach(function(k){
-    state.dispatches[k].forEach(function(d){
-      trays += (+d.trays||0);
-      trips += d.truckIds.length;
-    });
+    var pk = pendingOf(k);
+    pk.forEach(function(d){ trays += (+d.trays||0); });
+    state.config.trucks.forEach(function(t){ trips += tripCountToday(pk, t.id); });
   });
   document.getElementById("s_days").textContent = keys.length;
   document.getElementById("s_trays").textContent = fmtNum(trays);
@@ -1976,7 +2068,7 @@ function renderStats(){
 function dayClass(arr){
   if(!arr||!arr.length) return "free";
   if(dayTrays(arr) >= dayLimit()) return "full";
-  var full = state.config.trucks.every(function(t){
+  var full = convoyTrucks().every(function(t){
     return remMin(arr,t.id) < ((+t.loadMin||0)+(+t.unloadMin||0));
   });
   return full ? "full" : "partial";
@@ -2072,16 +2164,19 @@ function renderPanel(){
   updateSuggestion();
 }
 
+function pendingOf(k){ return (state.dispatches[k]||[]).filter(function(d){ return !d.finalizado; }); }
 function renderUpcoming(){
-  var keys = Object.keys(state.dispatches).filter(function(k){return (state.dispatches[k]||[]).length && k>=todayStr();}).sort();
+  var desde = iso(new Date(Date.now() - 7*86400000)), hoyU = todayStr();
+  var keys = Object.keys(state.dispatches).filter(function(k){return pendingOf(k).length && k>=desde;}).sort();
   if(!keys.length) return '<div class="empty">'+traySvgBig()+'<div>'+L("emptySel")+'</div></div>';
   var html = '<div class="dlist">';
   keys.forEach(function(k){
     var dt = parseISO(k);
     html += '<div class="drow" onclick="pickDay(\''+k+'\')" style="cursor:pointer">'
-      + '<div class="d1"><div class="dname">'+dt.toLocaleDateString(lang==="es"?"es-CL":"en-US",{weekday:"short",day:"numeric",month:"short"})+'</div>'
-      + '<div class="dtrays">'+fmtNum(dayTrays(state.dispatches[k]))+' '+L("trayUnit")+'</div></div>'
-      + '<div class="d2">'+state.dispatches[k].map(function(d){
+      + '<div class="d1"><div class="dname">'+dt.toLocaleDateString(lang==="es"?"es-CL":"en-US",{weekday:"short",day:"numeric",month:"short"})
+      + (k < hoyU ? ' <span style="color:var(--danger);font-size:12px;font-weight:700">· atrasado, sin finalizar</span>' : '') + '</div>'
+      + '<div class="dtrays">'+fmtNum(dayTrays(pendingOf(k)))+' '+L("trayUnit")+'</div></div>'
+      + '<div class="d2">'+pendingOf(k).map(function(d){
           var f = farmerById(d.farmerId);
           return esc(f?f.name:(d.farmerName||"—"));
         }).join(" · ")+'</div></div>';
@@ -2090,6 +2185,7 @@ function renderUpcoming(){
 }
 
 function truckTag(ids){
+  if(!ids || !ids.length) return '<span class="tag" style="background:#6b4f1d">🚜 Retira agricultor</span>';
   if(ids.length>1) return '<span class="tag convoy">'+truckSvg()+'Convoy</span>';
   var t = truckById(ids[0]);
   return '<span class="tag">'+truckSvg()+esc(t?t.name:ids[0])+'</span>';
@@ -2134,6 +2230,152 @@ function buildDriverMessage(ds, d){
     L1.push(driverLink(d.driverToken));
   }
   return L1.join("\n");
+}
+
+/* ============================ HISTORIAL ============================
+   Un despacho queda "finalizado" cuando el chofer confirma la entrega (automático)
+   o cuando logística presiona "✅ Finalizar". Sale de los pendientes y pasa al historial. */
+function _findDispatch(id){
+  for(var k in state.dispatches){
+    var d = (state.dispatches[k]||[]).filter(function(x){ return x.id === id; })[0];
+    if(d) return d;
+  }
+  return null;
+}
+function finalizeDispatch(ds, id){
+  if(!isAdmin()) return;
+  var d = _findDispatch(id); if(!d) return;
+  var e = entregaOf(d);
+  var sug = (e && e.termino && e.termino.bandejas != null) ? e.termino.bandejas : d.trays;
+  var n = prompt("Finalizar despacho de " + (d.farmerName || "") + "\n\n¿Cuántas bandejas se entregaron?", sug);
+  if(n === null) return;
+  var ent = parseInt(n, 10);
+  if(isNaN(ent) || ent < 0){ alert("Ingresa un número válido."); return; }
+  _saveFinal(d, {finalizado: true, finalizadoAt: new Date().toISOString(), finalizadoPor: currentUser, bandejasEntregadas: ent});
+}
+function _saveFinal(d, upd){
+  Object.assign(d, upd);
+  if(storageMode === "firebase" && FBApi.isAvailable()){
+    FBApi.updateDocument("despachos", d.id, upd).catch(function(e){ alert("❌ No se pudo guardar: " + e.message); });
+  } else saveState();
+  renderAll();
+  var h = document.getElementById("ovHist"); if(h && h.classList.contains("show")) renderHistory();
+}
+function reopenDispatch(id){
+  if(!isAdmin()) return;
+  var d = _findDispatch(id); if(!d) return;
+  if(!confirm("¿Volver a dejar pendiente el despacho de " + (d.farmerName||"") + "?")) return;
+  _saveFinal(d, {finalizado: false, finalizadoAt: "", finalizadoPor: "", bandejasEntregadas: null});
+}
+/* Cuando el chofer confirma la entrega, logística marca el despacho como finalizado */
+function autoFinalizeFromEntregas(){
+  if(!isAdmin() || storageMode !== "firebase") return;
+  Object.keys(state.entregas || {}).forEach(function(t){
+    var e = state.entregas[t];
+    if(!e.termino || !e.dispatchId) return;
+    var d = _findDispatch(e.dispatchId);
+    if(!d || d.finalizado) return;
+    _saveFinal(d, {finalizado: true, finalizadoAt: e.termino.atLocal || new Date().toISOString(),
+      finalizadoPor: "Chofer" + (e.termino.chofer ? ": " + e.termino.chofer : ""),
+      bandejasEntregadas: +e.termino.bandejas || 0});
+  });
+}
+function histRowHtml(d, ds, compact){
+  var e = entregaOf(d), t = e && e.termino;
+  var entregadas = d.bandejasEntregadas != null ? +d.bandejasEntregadas : (t ? +t.bandejas : +d.trays);
+  var dif = entregadas !== +d.trays;
+  var h = '<div class="hrow">'
+    + '<div class="hmain"><strong>' + esc(d.farmerName || (farmerById(d.farmerId)||{}).name || "—") + '</strong>'
+    + (compact ? '' : ' <span class="hdate">' + esc(String(ds||d.date).split("-").reverse().join("-")) + '</span>')
+    + '<div class="hsub">' + fmtNum(entregadas) + ' bandejas entregadas'
+    + (dif ? ' <span style="color:var(--danger)">(programadas ' + fmtNum(d.trays) + ')</span>' : '')
+    + (d.spsCode ? ' · SPS ' + esc(d.spsCode) : '') + (d.contractNumber ? ' · Contrato ' + esc(d.contractNumber) : '')
+    + ' · ' + esc(d.user || "—") + '</div>'
+    + '<div class="hsub">✅ ' + esc(fmtHoraCorta(d.finalizadoAt)) + ' · ' + esc(d.finalizadoPor || "")
+    + (t && t.recibio ? ' · Recibió: ' + esc(t.recibio) : '') + '</div></div>'
+    + '<div class="hacts">';
+  if(e && ((e.inicio && e.inicio.foto) || (t && t.foto))) h += '<a href="#" onclick="openEntregaFotos(\'' + e.token + '\');return false;">📷 Fotos</a>';
+  if(t && gpsLink(t.gps)) h += '<a href="' + esc(gpsLink(t.gps)) + '" target="_blank" rel="noopener">📍 GPS</a>';
+  if(isAdmin()) h += '<a href="#" onclick="reopenDispatch(\'' + d.id + '\');return false;">↩ Reabrir</a>';
+  return h + '</div></div>';
+}
+function openHistory(){
+  document.getElementById("ovHist").classList.add("show");
+  renderHistory();
+}
+function historyRows(){
+  var q = normTxt((document.getElementById("h_q")||{}).value || "");
+  var desde = (document.getElementById("h_desde")||{}).value || "";
+  var hasta = (document.getElementById("h_hasta")||{}).value || "";
+  var quien = (document.getElementById("h_user")||{}).value;
+  if(quien == null) quien = isAdmin() ? "" : currentUser;
+  var rows = [];
+  for(var k in state.dispatches){
+    (state.dispatches[k]||[]).forEach(function(d){
+      if(!d.finalizado) return;
+      if(desde && k < desde) return;
+      if(hasta && k > hasta) return;
+      if(quien && normalizeUser(d.user) !== normalizeUser(quien)) return;
+      if(q && normTxt([d.farmerName, d.spsCode, d.contractNumber, d.user, d.fieldman].join(" ")).indexOf(q) < 0) return;
+      rows.push(Object.assign({date: k}, d));
+    });
+  }
+  return rows.sort(function(a,b){ return a.date < b.date ? 1 : (a.date > b.date ? -1 : 0); });
+}
+function renderHistory(){
+  var body = document.getElementById("histBody");
+  var prev = {q: (document.getElementById("h_q")||{}).value || "", desde: (document.getElementById("h_desde")||{}).value || "",
+    hasta: (document.getElementById("h_hasta")||{}).value || "", user: (document.getElementById("h_user")||{}).value};
+  if(prev.user == null) prev.user = isAdmin() ? "" : currentUser;
+  var users = APP_CONFIG.authorizedUsers.map(function(u){ return u.name; });
+  body.innerHTML = '<div class="hfilters">'
+    + '<input id="h_q" placeholder="🔍 Agricultor, SPS, contrato…" value="' + esc(prev.q) + '" oninput="renderHistoryList()">'
+    + '<label>Desde <input type="date" id="h_desde" value="' + esc(prev.desde) + '" onchange="renderHistoryList()"></label>'
+    + '<label>Hasta <input type="date" id="h_hasta" value="' + esc(prev.hasta) + '" onchange="renderHistoryList()"></label>'
+    + '<select id="h_user" onchange="renderHistoryList()"><option value="">Todos los usuarios</option>'
+    + users.map(function(u){ return '<option' + (normalizeUser(u) === normalizeUser(prev.user) ? ' selected' : '') + '>' + esc(u) + '</option>'; }).join("")
+    + '</select>'
+    + '<button class="btn ghost sm" onclick="exportHistory()">📊 Descargar Excel</button></div>'
+    + '<div id="histList"></div>';
+  renderHistoryList();
+}
+function renderHistoryList(){
+  var rows = historyRows();
+  var tot = rows.reduce(function(s,d){ return s + (d.bandejasEntregadas != null ? +d.bandejasEntregadas : +d.trays); }, 0);
+  document.getElementById("histList").innerHTML =
+    '<div class="hint" style="margin:8px 0">' + rows.length + ' despachos finalizados · ' + fmtNum(tot) + ' bandejas entregadas</div>'
+    + (rows.length ? rows.map(function(d){ return histRowHtml(d, d.date, false); }).join("")
+      : '<div class="empty">Aún no hay despachos finalizados con estos filtros.</div>');
+}
+function exportHistory(){
+  var rows = historyRows();
+  if(!rows.length){ alert("No hay despachos en el historial con estos filtros."); return; }
+  var head = ["Fecha","Agricultor","Bandejas programadas","Bandejas entregadas","Recibió","Chofer","Finalizado","Finalizado por","SPS","Contrato","Solicitó","Fieldman"];
+  var data = rows.map(function(d){
+    var e = entregaOf(d), t = (e && e.termino) || {}, i = (e && e.inicio) || {};
+    return [String(d.date).split("-").reverse().join("-"), d.farmerName || "", +d.trays || 0,
+      d.bandejasEntregadas != null ? +d.bandejasEntregadas : (+t.bandejas || +d.trays || 0),
+      t.recibio || "", t.chofer || i.chofer || "", fmtHoraCorta(d.finalizadoAt), d.finalizadoPor || "",
+      d.spsCode || "", d.contractNumber || "", d.user || "", d.fieldman || ""];
+  });
+  var fname = "Historial_despachos_" + todayStr() + ".xlsx";
+  if(typeof ExcelJS !== "undefined"){
+    var wb = new ExcelJS.Workbook(), ws = wb.addWorksheet("Historial");
+    ws.addRow(head); data.forEach(function(r){ ws.addRow(r); });
+    ws.getRow(1).font = {bold: true, color: {argb: "FFFFFFFF"}};
+    ws.getRow(1).fill = {type: "pattern", pattern: "solid", fgColor: {argb: "FF14366E"}};
+    ws.columns.forEach(function(c, i){ c.width = [11,38,12,12,22,20,14,20,12,11,20,10][i] || 12; });
+    wb.xlsx.writeBuffer().then(function(buf){
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([buf], {type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));
+      a.download = fname; document.body.appendChild(a); a.click(); a.remove();
+    });
+  } else {
+    var csv = [head].concat(data).map(function(r){ return r.map(function(v){ return '"' + String(v).replace(/"/g,'""') + '"'; }).join(";"); }).join("\n");
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob(["\ufeff" + csv], {type: "text/csv"}));
+    a.download = fname.replace(".xlsx", ".csv"); document.body.appendChild(a); a.click(); a.remove();
+  }
 }
 
 /* ===== Seguimiento del chofer (inicio / término de despacho) ===== */
@@ -2369,9 +2611,15 @@ function renderDay(ds){
   });
   html += '</div>';
   // Dispatches list
-  if(arr.length){
+  var activos = arr.filter(function(d){ return !d.finalizado; });
+  var finalizados = arr.filter(function(d){ return !!d.finalizado; });
+  if(finalizados.length){
+    html += '<details class="findone"><summary>✅ Finalizados este día (' + finalizados.length + ') · ' + fmtNum(dayTrays(finalizados)) + ' bandejas</summary>'
+      + finalizados.map(function(d){ return histRowHtml(d, ds, true); }).join("") + '</details>';
+  }
+  if(activos.length){
     html += '<div class="dlist">';
-    arr.forEach(function(d){
+    activos.forEach(function(d){
       var f = farmerById(d.farmerId) || {name:d.farmerName||"—", phone:d.phone||"", address:d.address||""};
       var href = mapsHref(f);
       var tv = travelMin(f);
@@ -2379,7 +2627,7 @@ function renderDay(ds){
       var typeLabel = d.gender === "F" ? "Female" : (d.gender === "M" ? "Male" : "");
       html += '<div class="drow"><div class="d1"><div class="dname">'+esc(f.name)+(typeLabel?' <span style="font-size:11px;color:var(--muted);font-weight:600">('+typeLabel+')</span>':'')+'</div>'
         + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+statusTag(d.status)+'<div class="dtrays">'+fmtNum(d.trays)+' bandejas</div></div></div>'
-        + '<div class="d2">'+truckTag(d.truckIds)
+        + '<div class="d2">'+(isAdmin() && !d.finalizado ? vehicleQuickSelect(ds, d) : truckTag(d.truckIds))
         + (d.plants?'<span><strong>'+fmtNum(d.plants)+'</strong> plantas</span>':'')
         + (germPct?'<span>Germ: <strong>'+germPct+'</strong></span>':'')
         + (d.superficieHa?'<span>'+d.superficieHa+' HA</span>':'')
@@ -2403,6 +2651,7 @@ function renderDay(ds){
         + (!href && canShareToDriver() && farmerById(d.farmerId) ? '<a href="#" style="color:var(--danger)" onclick="editFarmerLocation(\''+d.farmerId+'\');return false;">'+pinSvg()+'Agregar ubicación</a>' : '')
         + (canShareToDriver() ? '<a href="#" class="wa-share" onclick="shareDispatchWhatsApp(\''+ds+'\',\''+d.id+'\');return false;">'+waSvg()+'WhatsApp conductor</a>' : '')
         + (canEditDispatch(d) ? '<span class="acts">'
+            + (isAdmin() ? '<button class="btn success sm" onclick="finalizeDispatch(\''+ds+'\',\''+d.id+'\')">✅ Finalizar</button>' : '')
             + '<button class="btn ghost sm" onclick="reagendar(\''+ds+'\',\''+d.id+'\')">📅 Reagendar</button>'
             + '<button class="btn ghost sm" onclick="editDispatch(\''+ds+'\',\''+d.id+'\')">'+L("edit")+'</button>'
             + '<button class="btn danger sm" onclick="delDispatch(\''+ds+'\',\''+d.id+'\')">'+L("del")+'</button>'
@@ -2468,7 +2717,8 @@ function renderDay(ds){
     + '</div>'
     + '<label class="fl">'+L("truck")+'</label><select id="f_truck"><option value="auto">'+L("tAuto")+'</option>'
     + state.config.trucks.map(function(t){return '<option value="'+t.id+'">'+esc(t.name)+' ('+t.capacity+')</option>';}).join("")
-    + '<option value="convoy">'+L("tConvoy")+' ('+maxConvoy()+')</option></select>'
+    + '<option value="convoy">Convoy ('+convoyTrucks().map(function(t){return esc(t.name);}).join(" + ")+') ('+maxConvoy()+')</option>'
+    + '<option value="retiro">🚜 Retira el agricultor (sin vehículo nuestro)</option></select>'
     + '<div id="sgbox"></div>'
     + '<div class="row2">'
     + '<div><label class="fl">'+L("contractNum")+'</label><input id="f_contract" type="text" maxlength="60" placeholder="N° Contrato Invernadero"></div>'
@@ -2665,6 +2915,12 @@ function updateSuggestion(){
   var est = (s.km!=null) ? fmtL("estTo",{KM:s.km.toFixed(1),M:s.travelMin})
     : (s.travelMin!=null ? "Viaje estimado: " + s.travelMin + " min de ida"
     : "Agricultor sin ubicación: se estima " + defaultTravelMin() + " min de ida");
+  if(s.mode==="single" && s.sameTrip){
+    var ts = truckById(s.truckIds[0]);
+    box.innerHTML = '<div class="sg ok"><div class="sgt">'+okSvg()+'Mismo viaje: '+esc(ts.name)+'</div><ul><li>Este agricultor ya tiene '
+      + fmtNum(s.yaCarga)+' bandejas en '+esc(ts.name)+' ese día; se suman ('+fmtNum(s.yaCarga + trays)+' de '+fmtNum(ts.capacity)+').</li></ul></div>';
+    return;
+  }
   if(s.mode==="single"){
     var t = truckById(s.truckIds[0]);
     var c = tripCost(f,t);
@@ -2752,8 +3008,10 @@ function addDispatch(){
     var s = suggest(selDate,trays,gid);
     if(s.mode==="none"){alert(L("sgNone")+":\n• "+s.reasons.join("\n• "));return;}
     truckIds = s.truckIds;
+  } else if(pick==="retiro"){
+    truckIds = [];
   } else if(pick==="convoy"){
-    truckIds = state.config.trucks.map(function(t){return t.id;});
+    truckIds = convoyTrucks().map(function(t){return t.id;});
     if(trays > maxConvoy() && !confirm(fmtL("warnCapManual",{N:trays,C:maxConvoy()})+"\n\nOK?")) return;
   } else {
     truckIds = [pick];
@@ -2770,7 +3028,7 @@ function addDispatch(){
     }
     var arr = dayArr(selDate);
     var bad = truckIds.some(function(id){
-      return remMin(arr,id) < tripCost(f,truckById(id));
+      return !fitsOnTruck(arr, gid, trays, id, truckIds.length);
     });
     if(bad && !confirm(L("warnTimeManual")+"\n\nOK?")) return;
   }
@@ -2791,6 +3049,7 @@ function addDispatch(){
     prioridad: prioridad,
     op: op,
     truckIds: truckIds,
+    retiroAgricultor: pick === "retiro",
     origin: origin,
     notes: notes,
     contractNumber: contract,
@@ -2860,7 +3119,7 @@ function addDispatch(){
     clearDispatchForm();   // la suscripción en tiempo real trae el despacho
   } else {
     if(!state.dispatches[selDate]) state.dispatches[selDate] = [];
-    state.dispatches[selDate].push(newDispatch);
+    state.dispatches[selDate].push(newDispatch);  
     saveState();
     clearDispatchForm();
     renderAll();
@@ -2960,7 +3219,7 @@ function _populateDispatchForm(d){
   document.getElementById("f_fieldman").value = d.fieldman||"";
   document.getElementById("f_prioridad").value = d.prioridad||1;
   document.getElementById("f_op").value = d.op||"";
-  document.getElementById("f_truck").value = (d.truckIds && d.truckIds.length>1) ? "convoy" : ((d.truckIds && d.truckIds[0])||"auto");
+  document.getElementById("f_truck").value = (d.truckIds && d.truckIds.length>1) ? "convoy" : ((d.truckIds && d.truckIds[0]) || (d.truckIds && !d.truckIds.length && d.retiroAgricultor ? "retiro" : "auto"));
   document.getElementById("f_contract").value = d.contractNumber||"";
   document.getElementById("f_sps").value = d.spsCode||"";
   document.getElementById("f_resp").value = d.responsible||"";
@@ -3806,9 +4065,11 @@ function renderConfig(){
     + '<div class="btnrow"><button class="btn ghost" onclick="useDepotGps()">'+gpsSvg()+L("cGpsDepot")+'</button></div>'
     + '<div class="sec"><h4>'+L("cTrucks")+'</h4>';
   c.trucks.forEach(function(t,i){
-    html += '<div class="tk"><div class="row2">'
+    html += '<div class="tk"><div style="display:flex;justify-content:flex-end"><button class="btn danger sm" onclick="removeVehicle('+i+')" '+(c.trucks.length<2?'disabled':'')+'>Quitar</button></div>'
+      + '<div class="row3">'
       + '<div><label class="fl">'+L("cTName")+'</label><input id="ct_n'+i+'" value="'+esc(t.name)+'"></div>'
-      + '<div><label class="fl">'+L("cCap")+'</label><input id="ct_c'+i+'" type="number" value="'+t.capacity+'"></div></div>'
+      + '<div><label class="fl">'+L("cCap")+'</label><input id="ct_c'+i+'" type="number" value="'+t.capacity+'"></div>'
+      + '<div><label class="fl">Tipo</label><select id="ct_t'+i+'"><option value="camion"'+((t.tipo||"camion")==="camion"?" selected":"")+'>Camión</option><option value="camioneta"'+(t.tipo==="camioneta"?" selected":"")+'>Camioneta</option></select></div></div>'
       + '<div class="row3"><div><label class="fl">'+L("cStart")+'</label><input id="ct_s'+i+'" type="time" value="'+t.dayStart+'"></div>'
       + '<div><label class="fl">'+L("cEnd")+'</label><input id="ct_e'+i+'" type="time" value="'+t.dayEnd+'"></div>'
       + '<div><label class="fl">'+L("cSpeed")+'</label><input id="ct_v'+i+'" type="number" value="'+t.speed+'"></div></div>'
@@ -3816,6 +4077,8 @@ function renderConfig(){
       + '<div><label class="fl">'+L("cUnload")+'</label><input id="ct_u'+i+'" type="number" value="'+t.unloadMin+'"></div></div></div>';
   });
   var wds = (state.calendar && state.calendar.weekdays) || [];
+  html += '<button class="btn ghost sm" onclick="addVehicle()">➕ Agregar vehículo</button>'
+    + '<div class="hint">Las camionetas se sugieren solas para pocas bandejas y no entran en el convoy.</div>';
   html += '</div><div class="sec"><h4>Días sin despacho</h4>'
     + '<div style="display:flex;gap:14px;flex-wrap:wrap">'
     + [[1,"Lun"],[2,"Mar"],[3,"Mié"],[4,"Jue"],[5,"Vie"],[6,"Sáb"],[0,"Dom"]].map(function(w){
@@ -3832,6 +4095,39 @@ function renderConfig(){
   document.getElementById("cfgBody").innerHTML = html;
 }
 
+function _keepConfigInputs(){
+  // Guarda lo escrito en pantalla antes de agregar/quitar un vehículo
+  var c = state.config;
+  c.trucks.forEach(function(t,i){
+    var g = function(k){ var el = document.getElementById(k+i); return el ? el.value : null; };
+    if(g("ct_n") !== null) t.name = g("ct_n").trim();
+    if(g("ct_c") !== null) t.capacity = +g("ct_c") || 0;
+    if(g("ct_s") !== null) t.dayStart = g("ct_s");
+    if(g("ct_e") !== null) t.dayEnd = g("ct_e");
+    if(g("ct_v") !== null) t.speed = +g("ct_v") || 55;
+    if(g("ct_l") !== null) t.loadMin = +g("ct_l") || 0;
+    if(g("ct_u") !== null) t.unloadMin = +g("ct_u") || 0;
+    if(g("ct_t") !== null) t.tipo = g("ct_t");
+  });
+}
+function addVehicle(){
+  _keepConfigInputs();
+  state.config.trucks.push({id:"v"+Date.now().toString(36), name:"Nuevo vehículo", capacity:100, dayStart:"08:00", dayEnd:"18:00", speed:55, loadMin:20, unloadMin:15, tipo:"camioneta"});
+  renderConfig();
+}
+function removeVehicle(i){
+  _keepConfigInputs();
+  var t = state.config.trucks[i]; if(!t) return;
+  var hoy = todayStr(), usados = 0;
+  Object.keys(state.dispatches).forEach(function(k){
+    if(k < hoy) return;
+    (state.dispatches[k]||[]).forEach(function(d){ if(!d.finalizado && (d.truckIds||[]).indexOf(t.id) >= 0) usados++; });
+  });
+  if(usados){ alert("No se puede quitar " + t.name + ": tiene " + usados + " despacho(s) pendientes. Cámbialos de vehículo primero."); return; }
+  if(!confirm("¿Quitar " + t.name + "? (Presiona Guardar para confirmar el cambio)")) return;
+  state.config.trucks.splice(i,1);
+  renderConfig();
+}
 function useDepotGps(){
   if(!navigator.geolocation) return;
   navigator.geolocation.getCurrentPosition(function(p){
@@ -3855,7 +4151,9 @@ function saveConfig(){
     t.speed = +document.getElementById("ct_v"+i).value || 55;
     t.loadMin = +document.getElementById("ct_l"+i).value || 0;
     t.unloadMin = +document.getElementById("ct_u"+i).value || 0;
+    var tt = document.getElementById("ct_t"+i); if(tt) t.tipo = tt.value;
   });
+  c.vehiclesV2 = true;
   c.defaultTravelMin = +document.getElementById("cf_deftravel").value || 60;
   c.maxTraysPerDay = +document.getElementById("cf_maxday").value || 800;
   state.calendar = state.calendar || {blocked:{}, weekdays:[]};
@@ -3876,7 +4174,7 @@ function getCurrentUserDispatches(){
   var out = [];
   for(var k in state.dispatches){
     (state.dispatches[k]||[]).forEach(function(d){
-      if(normalizeUser(d.user)===normalizeUser(currentUser)) out.push(Object.assign({date:k}, d));
+      if(normalizeUser(d.user)===normalizeUser(currentUser) && !d.finalizado) out.push(Object.assign({date:k}, d));
     });
   }
   return out.sort(function(a,b){return a.date.localeCompare(b.date);});
@@ -4677,7 +4975,7 @@ function makeBackup(motivo){
   if(storageMode !== "firebase" || !FBApi.isAvailable()) return Promise.resolve(null);
   var now = new Date();
   var id = iso(now) + "_" + String(now.getHours()).padStart(2,"0") + String(now.getMinutes()).padStart(2,"0")
-    + String(now.getSeconds()).padStart(2,"0") + "_" + (motivo === "diario" ? "diario" : "limpieza");
+    + String(now.getSeconds()).padStart(2,"0") + "_" + (motivo === "diario" ? "diario" : (motivo === "antes de limpieza" ? "limpieza" : "manual"));
   var payload = JSON.stringify({despachos: _allDispatchesFlat(), devoluciones: state.returns || []});
   var CH = 700000, parts = [];
   for(var i = 0; i < payload.length; i += CH) parts.push(payload.slice(i, i + CH));
@@ -4773,11 +5071,11 @@ function promptReset(){
 }
 
 /* Cuenta despachos anteriores a una fecha (o todos si no se da fecha) */
-function countDispatches(beforeDate){
+function countDispatches(beforeDate, finalizados){
   var n = 0;
   for(var k in state.dispatches){
     if(beforeDate && k >= beforeDate) continue;
-    n += (state.dispatches[k]||[]).length;
+    n += (state.dispatches[k]||[]).filter(function(d){ return !!d.finalizado === !!finalizados; }).length;
   }
   return n;
 }
@@ -4830,11 +5128,25 @@ function renderCleanupPanel(){
   html += cleanupSection({
     id: 'disp',
     icon: '📦',
-    title: 'Despachos programados',
+    title: 'Despachos pendientes (sin finalizar)',
     total: totalDisp,
     color: 'var(--navy)',
     options: [
-      {value:'todos', label:'Todos los despachos', count: totalDisp},
+      {value:'todos', label:'Todos los pendientes', count: totalDisp},
+      {value:'antiguos', label:'Solo los anteriores a una fecha', dateInput:true, date: defaultDate}
+    ]
+  });
+
+  // === HISTORIAL (despachos finalizados) ===
+  var totalHist = countDispatches(null, true);
+  html += cleanupSection({
+    id: 'hist',
+    icon: '📚',
+    title: 'Historial (despachos finalizados)',
+    total: totalHist,
+    color: '#1f5c3b',
+    options: [
+      {value:'todos', label:'Todo el historial', count: totalHist},
       {value:'antiguos', label:'Solo los anteriores a una fecha', dateInput:true, date: defaultDate}
     ]
   });
@@ -4949,7 +5261,27 @@ function getCleanupPlan(){
     for(var k in state.dispatches){
       if(before && k >= before) continue;
       (state.dispatches[k]||[]).forEach(function(d){
+        if(d.finalizado) return;
         plan.dispatches.push({id: d.id, date: k, token: d.driverToken || ""});
+      });
+    }
+  }
+
+  // Historial (finalizados)
+  plan.histCount = 0;
+  if(document.getElementById("cl_hist") && document.getElementById("cl_hist").checked){
+    var modeH = document.querySelector('input[name="clmode_hist"]:checked');
+    var beforeH = null;
+    if(modeH && modeH.value === "antiguos"){
+      var hEl = document.getElementById("cldate_hist");
+      beforeH = hEl ? hEl.value : null;
+    }
+    for(var kh in state.dispatches){
+      if(beforeH && kh >= beforeH) continue;
+      (state.dispatches[kh]||[]).forEach(function(d){
+        if(!d.finalizado) return;
+        plan.dispatches.push({id: d.id, date: kh, token: d.driverToken || "", hist: true});
+        plan.histCount++;
       });
     }
   }
@@ -4995,7 +5327,9 @@ function updateCleanupSummary(){
   var plan = getCleanupPlan();
 
   var items = [];
-  if(plan.dispatches.length) items.push("<strong>" + fmtNum(plan.dispatches.length) + "</strong> despachos");
+  var nPend = plan.dispatches.length - (plan.histCount||0);
+  if(nPend) items.push("<strong>" + fmtNum(nPend) + "</strong> despachos pendientes");
+  if(plan.histCount) items.push("<strong>" + fmtNum(plan.histCount) + "</strong> despachos del historial");
   if(plan.returns.length) items.push("<strong>" + fmtNum(plan.returns.length) + "</strong> devoluciones");
   if(plan.productions.length) items.push("<strong>" + fmtNum(plan.productions.length) + "</strong> producciones");
   if(plan.fmMapping) items.push("el <strong>mapeo FM</strong>");
@@ -5037,7 +5371,9 @@ async function executeCleanup(){
   }
 
   var resumen = [];
-  if(plan.dispatches.length) resumen.push("  • " + fmtNum(plan.dispatches.length) + " despachos");
+  var nPendR = plan.dispatches.length - (plan.histCount||0);
+  if(nPendR) resumen.push("  • " + fmtNum(nPendR) + " despachos pendientes");
+  if(plan.histCount) resumen.push("  • " + fmtNum(plan.histCount) + " despachos del historial (con sus fotos)");
   if(plan.returns.length) resumen.push("  • " + fmtNum(plan.returns.length) + " devoluciones");
   if(plan.productions.length) resumen.push("  • " + fmtNum(plan.productions.length) + " producciones");
   if(plan.fmMapping) resumen.push("  • Mapeo FM → Usuario");
@@ -5046,7 +5382,7 @@ async function executeCleanup(){
   if(!confirm("Se eliminarán definitivamente:\n\n" + resumen.join("\n") + "\n\n¿Confirmar?")) return;
   // Despachos de hoy o futuros: doble confirmación escribiendo BORRAR
   var hoyC = todayStr();
-  var futuros = plan.dispatches.filter(function(x){ return (x.date||"") >= hoyC; }).length;
+  var futuros = plan.dispatches.filter(function(x){ return !x.hist && (x.date||"") >= hoyC; }).length;
   if(futuros){
     var t = prompt("⚠ " + futuros + " de esos despachos son de HOY o días FUTUROS (pedidos que aún no se despachan).\n\n"
       + "Para confirmar, escribe BORRAR:");
