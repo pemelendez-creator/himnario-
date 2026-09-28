@@ -1021,7 +1021,7 @@ var T = {
   noSecond:{es:"sin tiempo para otro viaje",en:"no time for another trip"},
   sgSingle:{es:"Sugerido: ",en:"Suggested: "},
   sgConvoy:{es:"Sugerido: Convoy (ambos camiones a este destino)",en:"Suggested: Convoy (both trucks to this destination)"},
-  sgNone:{es:"No se puede agendar este pedido hoy",en:"This order cannot be scheduled today"},
+  sgNone:{es:"No se puede agendar este pedido en este día",en:"This order cannot be scheduled today"},
   sgCapBig:{es:"Supera la capacidad de un solo camión y del convoy (máx. {C}). Divide el pedido en otro día.",en:"Exceeds single truck and convoy capacity (max {C}). Split across another day."},
   sgNoTruck:{es:"Ningún camión tiene capacidad y tiempo disponibles hoy. Prueba otro día.",en:"No truck has capacity and time available today. Try another day."},
   sgNoTime:{es:"Capacidad alcanza, pero el tiempo de jornada no permite el viaje a este destino hoy.",en:"Capacity fits, but the workday time does not allow the trip today."},
@@ -1833,6 +1833,12 @@ function suggest(date,trays,farmerId){
   var arr = dayArr(date), f = farmerById(farmerId);
   var tv = travelMin(f), km = distKm(f);
   var res = {mode:"none",truckIds:[],travelMin:tv,km:km,reasons:[]};
+  var usadas = dayTrays(arr);
+  if(usadas + trays > dayLimit()){
+    res.reasons.push("Límite diario de " + fmtNum(dayLimit()) + " bandejas: ya hay " + fmtNum(usadas)
+      + " agendadas, quedan " + fmtNum(Math.max(0, dayLimit() - usadas)) + ". Elige otro día.");
+    return res;
+  }
   if(trays > maxConvoy()){
     res.reasons.push(fmtL("sgCapBig",{C:maxConvoy()}));
     return res;
@@ -1945,6 +1951,8 @@ function fmtNum(n){return new Intl.NumberFormat(lang==="es"?"es-CL":"en-US").for
 function monthName(d){return d.toLocaleDateString(lang==="es"?"es-CL":"en-US",{month:"long",year:"numeric"});}
 function dayLong(s){return parseISO(s).toLocaleDateString(lang==="es"?"es-CL":"en-US",{weekday:"long",day:"numeric",month:"long",year:"numeric"});}
 function dayTrays(arr){return (arr||[]).reduce(function(s,d){return s+(+d.trays||0);},0);}
+/* Máximo de bandejas que se pueden despachar en un día (Configuración) */
+function dayLimit(){ var v = +(state.config && state.config.maxTraysPerDay); return v > 0 ? v : 800; }
 
 function renderStats(){
   var keys = Object.keys(state.dispatches).filter(function(k){return (state.dispatches[k]||[]).length;});
@@ -1966,6 +1974,7 @@ function renderStats(){
 
 function dayClass(arr){
   if(!arr||!arr.length) return "free";
+  if(dayTrays(arr) >= dayLimit()) return "full";
   var full = state.config.trucks.every(function(t){
     return remMin(arr,t.id) < ((+t.loadMin||0)+(+t.unloadMin||0));
   });
@@ -2031,7 +2040,7 @@ function restoreDispatchForm(m){
     ensureGrowerOption(m.f_grower.v);
   }
   Object.keys(m).forEach(function(id){
-    if(id === "f_production") return;
+    if(id === "f_production" || id === "f_date") return;
     var el = document.getElementById(id);
     if(!el) return;
     el.value = m[id].v;
@@ -2340,6 +2349,12 @@ function openWhatsAppWithText(msg){
 function renderDay(ds){
   var arr = state.dispatches[ds]||[];
   var html = '<div class="seldate">'+dayLong(ds)+'</div>';
+  var totDia = dayTrays(arr), lim = dayLimit(), pctDia = Math.min(100, Math.round(totDia/lim*100));
+  html += '<div class="tk daytot"><div class="tkhead"><span class="tkname">📦 Bandejas del día</span>'
+    + '<span class="tkcap"' + (totDia > lim ? ' style="color:var(--danger);font-weight:700"' : '') + '>' + fmtNum(totDia) + ' / ' + fmtNum(lim) + '</span></div>'
+    + '<div class="bar"><i class="'+(pctDia>=85?"hot":"")+'" style="width:'+pctDia+'%"></i></div>'
+    + '<div class="tkmeta"><span>' + (totDia > lim ? '⚠ Excede el límite en ' + fmtNum(totDia - lim) + ' bandejas: reagenda algún despacho'
+        : 'Quedan ' + fmtNum(lim - totDia) + ' bandejas disponibles') + '</span></div></div>';
   // Truck utilization bars
   html += '<div class="trucks">';
   state.config.trucks.forEach(function(t){
@@ -2387,6 +2402,7 @@ function renderDay(ds){
         + (!href && canShareToDriver() && farmerById(d.farmerId) ? '<a href="#" style="color:var(--danger)" onclick="editFarmerLocation(\''+d.farmerId+'\');return false;">'+pinSvg()+'Agregar ubicación</a>' : '')
         + (canShareToDriver() ? '<a href="#" class="wa-share" onclick="shareDispatchWhatsApp(\''+ds+'\',\''+d.id+'\');return false;">'+waSvg()+'WhatsApp conductor</a>' : '')
         + (canEditDispatch(d) ? '<span class="acts">'
+            + '<button class="btn ghost sm" onclick="reagendar(\''+ds+'\',\''+d.id+'\')">📅 Reagendar</button>'
             + '<button class="btn ghost sm" onclick="editDispatch(\''+ds+'\',\''+d.id+'\')">'+L("edit")+'</button>'
             + '<button class="btn danger sm" onclick="delDispatch(\''+ds+'\',\''+d.id+'\')">'+L("del")+'</button>'
             + '</span>' : '')
@@ -2420,7 +2436,11 @@ function renderDay(ds){
       + (_editing.date !== ds ? '<br>Al guardar se <strong>moverá</strong> a este día.' : '')
       + '<br><button class="btn ghost sm" style="margin-top:6px" onclick="cancelEdit()">Cancelar edición</button></div>';
   }
-  html += '<div class="sec" id="dispForm"><h4>'+(_editing ? '✏️ Editar despacho' : L("addDisp"))+'</h4>' + editBar
+  var dateField = _editing
+    ? '<label class="fl" style="color:var(--navy)">📅 Fecha del despacho</label>'
+      + '<input type="date" id="f_date" value="'+ds+'" min="'+(isAdmin() ? '' : todayStr())+'" onchange="moveEditDate(this.value)">'
+    : '';
+  html += '<div class="sec" id="dispForm"><h4>'+(_editing ? '✏️ Editar despacho' : L("addDisp"))+'</h4>' + editBar + dateField
     + ''
     + '<label class="fl" style="color:#0f7d3d">🌱 Producción del Invernadero (opcional — auto-completa SPS, contrato y germinación)</label>'
     + '<select id="f_production" onchange="onProductionSelected()"></select>'
@@ -2740,6 +2760,13 @@ function addDispatch(){
     if(t.capacity<trays && !confirm(fmtL("warnCapManual",{N:trays,C:t.capacity})+"\n\nOK?")) return;
   }
   if(pick!=="auto"){
+    var usadasDia = dayTrays(dayArr(selDate));
+    if(usadasDia + trays > dayLimit()){
+      var msgLim = "Límite diario de " + fmtNum(dayLimit()) + " bandejas: ese día ya tiene " + fmtNum(usadasDia)
+        + " y quedan " + fmtNum(Math.max(0, dayLimit() - usadasDia)) + ".";
+      if(!isAdmin()){ alert("🚫 " + msgLim + "\n\nElige otro día."); return; }
+      if(!confirm("⚠ " + msgLim + "\n\n¿Agendar de todas formas?")) return;
+    }
     var arr = dayArr(selDate);
     var bad = truckIds.some(function(id){
       return remMin(arr,id) < tripCost(f,truckById(id));
@@ -2881,6 +2908,30 @@ function editDispatch(ds,id){
   renderCalendar();
   renderPanel();
   _populateDispatchForm(d);
+}
+/* Cambia el día del despacho que se está editando (reagendar) */
+function moveEditDate(v){
+  if(!_editing || !v) return;
+  if(v < todayStr() && !isAdmin()){
+    alert("📅 No se puede reagendar a un día pasado.");
+    var fd = document.getElementById("f_date"); if(fd) fd.value = selDate;
+    return;
+  }
+  selDate = v;
+  var p = v.split("-"); view = new Date(+p[0], +p[1]-1, 1);
+  renderCalendar();
+  renderPanel();
+  var fd2 = document.getElementById("f_date"); if(fd2) fd2.value = v;
+  updateSuggestion();
+}
+/* Botón "Reagendar": abre la edición con la fecha lista para cambiar */
+function reagendar(ds, id){
+  editDispatch(ds, id);
+  var fd = document.getElementById("f_date");
+  if(fd){
+    fd.scrollIntoView && fd.scrollIntoView({behavior:"smooth", block:"center"});
+    setTimeout(function(){ try{ fd.focus(); if(fd.showPicker) fd.showPicker(); }catch(e){} }, 350);
+  }
 }
 function cancelEdit(){
   _editing = null;
@@ -3771,6 +3822,8 @@ function renderConfig(){
           + (wds.indexOf(w[0])>=0?' checked':'') + '> '+w[1]+'</label>';
       }).join("")
     + '</div><div class="hint">Los días marcados quedan bloqueados todas las semanas. Para un feriado puntual usa "🚫 Bloquear día" en el calendario.</div>'
+    + '<label class="fl">Máximo de bandejas por día (todos los camiones)</label>'
+    + '<input id="cf_maxday" type="number" min="1" step="10" value="'+dayLimit()+'">'
     + '<label class="fl">Tiempo de viaje (ida) para agricultores sin ubicación, en minutos</label>'
     + '<input id="cf_deftravel" type="number" min="10" step="5" value="'+defaultTravelMin()+'"></div>'
     + '<div class="hint">'+L("cNote")+'</div>'
@@ -3803,6 +3856,7 @@ function saveConfig(){
     t.unloadMin = +document.getElementById("ct_u"+i).value || 0;
   });
   c.defaultTravelMin = +document.getElementById("cf_deftravel").value || 60;
+  c.maxTraysPerDay = +document.getElementById("cf_maxday").value || 800;
   state.calendar = state.calendar || {blocked:{}, weekdays:[]};
   state.calendar.weekdays = Array.prototype.map.call(document.querySelectorAll(".cf_wd:checked"), function(x){ return +x.value; });
   if(storageMode === "firebase" && FBApi.isAvailable()){
