@@ -1719,6 +1719,19 @@ body {
   border-radius: 12px; cursor: pointer; background: var(--surface-2, #eee); color: var(--text, #222); }
 .fl-dirctl button.stop { background: #dc3545; color: #fff; flex: 0.8; }
 .fl-dirctl button:disabled { opacity: 0.35; cursor: default; }
+
+/* ===== v22: cancion completa en pantalla (sin desplazar) ===== */
+.fullscreen-lyrics.active { display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; }
+.fullscreen-lyrics .fl-header { position: static; flex: 0 0 auto; padding: 8px 12px; }
+.fullscreen-lyrics .fl-meta { flex: 0 0 auto; padding: 2px 12px; font-size: 0.72rem; }
+.fullscreen-lyrics .fl-meta:empty { display: none; }
+.fullscreen-lyrics .fl-content { flex: 1 1 auto; min-height: 0; overflow: hidden; line-height: 1.22;
+  padding: 6px 12px 8px; column-fill: auto; column-gap: 28px; column-rule: 1px solid var(--border); }
+.fullscreen-lyrics.zoomed .fl-content { overflow-y: auto; column-count: auto !important; }
+.fl-st { break-inside: avoid; margin-bottom: 0.55em; }
+.fl-st:last-child { margin-bottom: 0; }
+.fl-dirctl { position: static; flex: 0 0 auto; padding: 6px 10px calc(6px + env(safe-area-inset-bottom)); }
+.fl-dirctl button { padding: 11px 6px; }
 </style>
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#1f6feb">
@@ -2051,7 +2064,7 @@ const LOGO_PDF_URL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAYA
 const STORAGE_KEY = 'himnario_data';
 const SERVICE_KEY = 'himnario_service';
 const HYMNAL_VERSION = 'v20_completo';
-const APP_BUILD = 'v21';
+const APP_BUILD = 'v22';
 
 let hymns = [];
 let serviceList = [];
@@ -2969,7 +2982,7 @@ function renderCoristaView() {
 // ═══════════════════════════════════════
 // VISTA EN VIVO: la cancion en grande
 // ═══════════════════════════════════════
-let flZoom = (() => { try { return parseFloat(localStorage.getItem('fl_zoom')) || 1; } catch (e) { return 1; } })();
+let flZoom = 1;   // 1 = cancion completa en pantalla; A+/A- lo cambian solo para la cancion actual
 let lastLiveKey = '', flClosedKey = '', wakeLock = null;
 
 /* Quita UNA linea inicial solo si es el encabezado "393. SEÑOR MI DIOS"
@@ -2984,26 +2997,39 @@ function liveLyrics(h) {
   return lines.join('\n');
 }
 
-/* Letra lo mas grande posible: la linea mas larga ocupa el ancho de la pantalla */
+/* Letra lo mas grande posible SIN tener que bajar: prueba 1, 2, 3... columnas
+   y para cada una busca el tamaño maximo en que la cancion completa cabe. */
 function fitLyrics() {
   const fl = document.getElementById('fullscreenLyrics');
   const el = document.getElementById('flContent');
   if (!fl.classList.contains('active')) return;
-  const cs = getComputedStyle(el);
-  const avail = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 4;
-  const ctx = fitLyrics._c || (fitLyrics._c = document.createElement('canvas').getContext('2d'));
-  ctx.font = cs.fontWeight + ' 100px ' + cs.fontFamily;
-  // Se ajusta a las lineas normales (percentil 85): una linea excepcionalmente
-  // larga se parte en dos en vez de achicar toda la cancion.
-  const widths = (el.textContent || '').split('\n').filter(l => l.trim())
-    .map(l => ctx.measureText(l).width).sort((a, b) => a - b);
-  const ref = widths.length ? widths[Math.min(widths.length - 1, Math.floor(widths.length * 0.85))] : 1;
-  let size = Math.floor(100 * avail / Math.max(ref, 1));
-  const byHeight = Math.floor((window.innerHeight - 150) / (5 * 1.45));   // que se vean al menos ~5 lineas
-  size = Math.max(28, Math.min(size, 120, byHeight));
-  el.style.fontSize = Math.round(size * flZoom) + 'px';
+  const W = el.clientWidth, H = el.clientHeight;
+  if (!W || !H) return;
+  const fits = () => el.scrollWidth <= W + 1 && el.scrollHeight <= H + 1;
+  let best = { size: 0, cols: 1 };
+  const maxCols = Math.max(1, Math.min(4, Math.floor(W / 170)));
+  for (let cols = 1; cols <= maxCols; cols++) {
+    el.style.columnCount = cols;
+    let lo = 8, hi = 160;
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2);
+      el.style.fontSize = mid + 'px';
+      if (fits()) lo = mid; else hi = mid - 1;
+    }
+    if (lo > best.size + 1) best = { size: lo, cols: cols };   // mas columnas solo si de verdad agranda
+  }
+  el.style.columnCount = best.cols;
+  el.style.fontSize = best.size + 'px';
+  // cancion demasiado larga para esta pantalla: letra legible y se baja con el dedo
+  if (!fits()) { best.size = Math.max(16, Math.min(28, Math.round(W / 22), Math.round(H / 12))); }
+  const zoomed = Math.abs(flZoom - 1) > 0.01 || !fits();
+  fl.classList.toggle('zoomed', zoomed);
+  el.style.fontSize = Math.round(best.size * flZoom) + 'px';
+  el.scrollTop = 0;
 }
 window.addEventListener('resize', () => requestAnimationFrame(fitLyrics));
+window.addEventListener('orientationchange', () => setTimeout(fitLyrics, 300));
+document.addEventListener('fullscreenchange', () => setTimeout(fitLyrics, 150));
 
 /* Mantener la pantalla encendida mientras se lee */
 async function keepAwake(on) {
@@ -3035,7 +3061,9 @@ function openLyricsView(h, opts) {
     ' <span class="fl-live">EN VIVO</span>';
   document.getElementById('flMeta').textContent =
     opts.total ? 'Cancion ' + (opts.idx + 1) + ' de ' + opts.total : '';
-  document.getElementById('flContent').innerHTML = fmtLyrics(liveLyrics(h));
+  flZoom = 1;
+  document.getElementById('flContent').innerHTML = liveLyrics(h).replace(/\s+$/, '')
+    .split(/\n[ \t]*\n+/).map(st => '<div class="fl-st">' + fmtLyrics(st) + '</div>').join('');
   const fl = document.getElementById('fullscreenLyrics');
   fl.classList.add('active');
   fl.classList.toggle('is-live', !!opts.live);
@@ -3045,7 +3073,6 @@ function openLyricsView(h, opts) {
     document.getElementById('flPrev').disabled = opts.idx <= 0;
     document.getElementById('flNext').disabled = opts.idx >= opts.total - 1;
   }
-  fl.scrollTop = 0;
   requestAnimationFrame(fitLyrics);
   keepAwake(true);
 }
@@ -3091,8 +3118,9 @@ function closeFullscreenLyrics() {
 }
 
 function changeFontSize(d) {
-  flZoom = Math.max(0.5, Math.min(2.5, d > 0 ? flZoom * 1.12 : flZoom / 1.12));
-  try { localStorage.setItem('fl_zoom', String(flZoom)); } catch (e) {}
+  // A- nunca baja de "cancion completa"; A+ agranda (y entonces se puede bajar con el dedo)
+  flZoom = Math.max(1, Math.min(2.5, d > 0 ? flZoom * 1.15 : flZoom / 1.15));
+  if (flZoom < 1.02) flZoom = 1;
   fitLyrics();
 }
 
