@@ -1,8 +1,8 @@
-/* Service worker del Himnario IPB
+/* Service worker del Himnario IPB — Iglesia Pentecostal El Bosque
    Guarda la app completa en el celular para que abra sin señal.
    Al publicar una version nueva, sube CACHE_VERSION para forzar la actualizacion. */
 
-const CACHE_VERSION = 'himnario-v19';
+const CACHE_VERSION = 'himnario-v21';
 const ASSETS = [
   './',
   './index.html',
@@ -37,26 +37,30 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
 
   const url = new URL(req.url);
-  // Nunca interceptar el servidor de sincronizacion ni los TURN
+  // Nunca interceptar Firebase ni nada de otro dominio
   if (url.origin !== self.location.origin) return;
 
-  // La app: red primero (para recibir actualizaciones), cache si no hay señal
-  if (req.mode === 'navigate' || url.pathname.endsWith('index.html')) {
+  // La app y la configuracion: red primero (para recibir actualizaciones),
+  // cache solo si no hay señal. cache:'reload' salta el cache HTTP de GitHub,
+  // que retiene los archivos 10 minutos.
+  if (req.mode === 'navigate' ||
+      url.pathname.endsWith('index.html') ||
+      url.pathname.endsWith('firebase-config.json')) {
+    const clave = url.pathname.endsWith('firebase-config.json')
+      ? './firebase-config.json' : './index.html';
     e.respondWith(
-      // cache:'reload' salta el cache HTTP del navegador (GitHub Pages sirve
-      // los archivos con 10 minutos de vida, y eso dejaba la app vieja)
       fetch(req, { cache: 'reload' })
         .then(res => {
           const copy = res.clone();
-          caches.open(CACHE_VERSION).then(c => c.put('./index.html', copy));
+          caches.open(CACHE_VERSION).then(c => c.put(clave, copy));
           return res;
         })
-        .catch(() => caches.match('./index.html').then(r => r || caches.match('./')))
+        .catch(() => caches.match(clave).then(r => r || caches.match('./')))
     );
     return;
   }
 
-  // Todo lo demas: cache primero
+  // Todo lo demas (iconos): cache primero
   e.respondWith(
     caches.match(req).then(hit => hit || fetch(req).then(res => {
       if (res && res.status === 200 && res.type === 'basic') {
