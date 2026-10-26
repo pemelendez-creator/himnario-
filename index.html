@@ -2244,7 +2244,7 @@ const LOGO_PDF_URL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAYA
 const STORAGE_KEY = 'himnario_data';
 const SERVICE_KEY = 'himnario_service';
 const HYMNAL_VERSION = 'v20_completo';
-const APP_BUILD = 'v25';
+const APP_BUILD = 'v26';
 
 let hymns = [];
 let serviceList = [];
@@ -2617,16 +2617,46 @@ function fbSetRole(u) {
   if (!u || u.isAnonymous) { fbRole = ''; fbIsDirector = false; fbIsOwner = false; return; }
   if (u.uid === DIRECTOR_UID) { fbRole = 'director'; fbIsDirector = true; fbIsOwner = true; fbWatchOps(); return; }
   fbRole = 'revisando'; fbIsDirector = false; fbIsOwner = false;
-  FB.get(FB.ref(fbDb, 'operadores/' + u.uid)).then(s => {
+  if (fbSetRole._un) { try { fbSetRole._un(); } catch (e) {} }
+  fbSetRole._un = FB.onValue(FB.ref(fbDb, 'operadores/' + u.uid), s => {
     if (!fbUser || fbUser.uid !== u.uid) return;
+    const was = fbRole;
     fbRole = s.exists() ? 'operador' : 'pendiente';
     fbIsDirector = fbRole === 'operador';
+    if (fbRole === 'pendiente') fbSendRequest(u);
+    if (was === 'pendiente' && fbRole === 'operador') showToast('El director te autorizo: ya puedes usar Proyectar');
     updateDirectorUI();
-  }).catch(() => { fbRole = 'pendiente'; updateDirectorUI(); });
+  }, () => { fbRole = 'pendiente'; fbSendRequest(u); updateDirectorUI(); });
 }
+/* El operador nuevo avisa solo al director (Sala > Operadores > Solicitudes) */
+function fbSendRequest(u) {
+  if (fbSendRequest._done === u.uid) return;
+  fbSendRequest._done = u.uid;
+  FB.set(FB.ref(fbDb, 'solicitudes/' + u.uid), { email: u.email || '', desde: FB.serverTimestamp() })
+    .then(() => { fbSendRequest._ok = true; renderOps(); }).catch(() => { fbSendRequest._ok = false; renderOps(); });
+}
+let reqList = {}, reqUnsub = null;
+function fbCleanUid(raw) {
+  const t = String(raw || '').replace(/[\u200B-\u200D\uFEFF]/g, '');
+  const m = t.match(/[A-Za-z0-9_-]{10,128}/g);
+  if (!m) return '';
+  return m.sort((a, b) => b.length - a.length)[0];
+}
+async function approveReq(uid) {
+  const r = reqList[uid] || {};
+  const nombre = (prompt('Nombre del operador:', (r.email || '').split('@')[0]) || '').trim();
+  if (!nombre) return;
+  try {
+    await FB.set(FB.ref(fbDb, 'operadores/' + uid), { nombre: nombre, email: r.email || '', desde: FB.serverTimestamp() });
+    await FB.remove(FB.ref(fbDb, 'solicitudes/' + uid)).catch(() => {});
+    showToast(nombre + ' autorizado');
+  } catch (e) { showToast(String(e.code || e).includes('PERMISSION') ? 'Sin permiso: actualiza las reglas de Firebase' : 'Error: ' + (e.code || e.message)); }
+}
+async function rejectReq(uid) { try { await FB.remove(FB.ref(fbDb, 'solicitudes/' + uid)); } catch (e) {} }
 function fbWatchOps() {
   if (opUnsub || !fbDb) return;
   opUnsub = FB.onValue(FB.ref(fbDb, 'operadores'), s => { opList = s.val() || {}; renderOps(); }, () => {});
+  reqUnsub = FB.onValue(FB.ref(fbDb, 'solicitudes'), s => { reqList = s.val() || {}; renderOps(); }, () => {});
 }
 function renderOps() {
   const el = document.getElementById('opsPanel');
@@ -2635,10 +2665,10 @@ function renderOps() {
     el.innerHTML = `<div class="room-panel" style="text-align:left;">
       <h3 style="font-size:0.95rem;margin-bottom:6px;">Cuenta sin autorizar</h3>
       <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:8px;">Entraste como <b>${esc(fbUser.email || '')}</b>, pero el director
-        todavia no te agrego como operador. Enviale este codigo:</p>
+        todavia no te autoriza como operador. ${fbSendRequest._ok ? '<b>Ya le llego tu solicitud</b>: cuando la apruebe, esta pantalla cambia sola.' : 'Enviale este codigo:'}</p>
       <div style="font-family:monospace;font-size:0.82rem;background:var(--surface-2);padding:8px;border-radius:8px;word-break:break-all;">${esc(fbUser.uid)}</div>
       <button class="btn btn-outline btn-sm" style="margin-top:8px;" onclick="navigator.clipboard.writeText('${fbUser.uid}').then(()=>showToast('Codigo copiado'))">Copiar codigo</button>
-      <button class="btn btn-outline btn-sm" style="margin-top:8px;" onclick="fbSetRole(fbUser);showToast('Revisando...')">Ya me agrego</button></div>`;
+      </div>`;
     return;
   }
   if (!fbIsOwner) { el.innerHTML = ''; return; }
@@ -2647,8 +2677,11 @@ function renderOps() {
     <h3 style="font-size:0.95rem;margin-bottom:4px;">Operadores del proyector</h3>
     <p style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:10px;">Pueden abrir la sala y manejar el data (canciones, Biblia, videos, avisos)
       con su propia cuenta. No pueden publicar ni borrar la biblioteca.</p>
+    ${Object.keys(reqList).length ? '<div style="background:var(--warning-light);border-radius:8px;padding:8px 10px;margin-bottom:10px;"><b style="font-size:0.82rem;">Solicitudes nuevas</b>' +
+      Object.keys(reqList).map(id => `<div style="display:flex;align-items:center;gap:6px;padding:6px 0;"><span style="flex:1;font-size:0.84rem;word-break:break-all;">${esc((reqList[id] && reqList[id].email) || id)}</span>
+        <button class="btn btn-success btn-sm" onclick="approveReq('${id}')">Aprobar</button><button class="btn btn-outline btn-sm" onclick="rejectReq('${id}')">&#10005;</button></div>`).join('') + '</div>' : ''}
     ${ids.length ? ids.map(id => `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);">
-      <span style="flex:1;font-size:0.85rem;"><b>${esc((opList[id] && opList[id].nombre) || 'Operador')}</b>
+      <span style="flex:1;font-size:0.85rem;"><b>${esc((opList[id] && opList[id].nombre) || 'Operador')}</b> ${opList[id] && opList[id].email ? '<span style="color:var(--text-secondary);font-size:0.75rem;">' + esc(opList[id].email) + '</span>' : ''}
       <span style="color:var(--text-muted);font-family:monospace;font-size:0.7rem;"> ${esc(id.slice(0, 8))}...</span></span>
       <button class="btn btn-outline btn-sm" onclick="removeOp('${id}')">Quitar</button></div>`).join('')
       : '<p style="font-size:0.8rem;color:var(--text-muted);">Todavia no hay operadores.</p>'}
@@ -2656,13 +2689,17 @@ function renderOps() {
       <input id="opName" placeholder="Nombre (ej. Felipe)" style="flex:1;min-width:110px;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text-primary);">
       <input id="opUid" placeholder="Codigo (UID)" style="flex:2;min-width:150px;padding:8px;border:1px solid var(--border);border-radius:8px;font-family:monospace;background:var(--surface);color:var(--text-primary);">
       <button class="btn btn-primary btn-sm" onclick="addOp()">Agregar</button></div>
-    <p style="font-size:0.72rem;color:var(--text-muted);margin-top:8px;line-height:1.45;">El codigo aparece en la app cuando el operador entra con su cuenta,
-      o en Firebase &rsaquo; Authentication (columna "UID de usuario").</p></div>`;
+    <p style="font-size:0.72rem;color:var(--text-muted);margin-top:8px;line-height:1.45;">Lo mas facil: el operador entra con su cuenta en la app y su solicitud
+      aparece aqui arriba para aprobarla. Tambien puedes pegar su codigo: aparece en su pantalla o en Firebase &rsaquo; Authentication (columna "UID de usuario").</p></div>`;
 }
 async function addOp() {
   const nombre = document.getElementById('opName').value.trim() || 'Operador';
-  const uid = document.getElementById('opUid').value.trim();
-  if (!/^[A-Za-z0-9]{20,40}$/.test(uid)) { showToast('Codigo (UID) no valido'); return; }
+  const raw = document.getElementById('opUid').value;
+  if (/@/.test(raw) && !/[A-Za-z0-9_-]{20,}/.test(raw.replace(/\S*@\S*/g, ''))) {
+    showToast('Ese es un correo: pega el codigo (UID), o pide al operador que entre a la app y aprueba su solicitud'); return; }
+  const uid = fbCleanUid(raw);
+  if (!uid) { showToast('No encontre un codigo en lo que pegaste'); return; }
+  document.getElementById('opUid').value = uid;
   if (uid === DIRECTOR_UID) { showToast('Ese es el director'); return; }
   try { await FB.set(FB.ref(fbDb, 'operadores/' + uid), { nombre: nombre, desde: FB.serverTimestamp() }); showToast(nombre + ' agregado'); }
   catch (e) { showToast(String(e.code || e).includes('PERMISSION') ? 'Sin permiso: primero actualiza las reglas de Firebase' : 'Error: ' + (e.code || e.message)); }
