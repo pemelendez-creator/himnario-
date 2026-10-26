@@ -1732,6 +1732,128 @@ body {
 .fl-st:last-child { margin-bottom: 0; }
 .fl-dirctl { position: static; flex: 0 0 auto; padding: 6px 10px calc(6px + env(safe-area-inset-bottom)); }
 .fl-dirctl button { padding: 11px 6px; }
+
+/* ===== v23: PROYECTOR (como VideoPsalm) ===== */
+.pj-root { position: relative; overflow: hidden; background: #000; color: #fff; --h: 540px;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; user-select: none; }
+.pj-bg, .pj-img { position: absolute; inset: 0; transition: opacity .5s; }
+.pj-img { background-size: cover; background-position: center; opacity: 0; }
+.pj-img::after { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,.38); }
+.pj-stage { position: absolute; left: 5%; right: 5%; top: 6%; bottom: 11%; transition: opacity .35s; }
+.pj-root.has-ticker .pj-stage { bottom: 17%; }
+.pj-layer { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; text-align: center; opacity: 0; transition: opacity .35s ease; }
+.pj-layer.on { opacity: 1; }
+.pj-txt { white-space: pre-line; font-weight: 700; line-height: 1.2; max-width: 100%; overflow-wrap: break-word;
+  text-shadow: 0 2px 8px rgba(0,0,0,.9), 0 0 3px rgba(0,0,0,.9); }
+.pj-txt.up { text-transform: uppercase; }
+.pj-txt.biblia { font-weight: 600; line-height: 1.28; }
+.pj-foot { position: absolute; left: 5%; right: 5%; bottom: calc(var(--h) * 0.03); text-align: center;
+  font-size: calc(var(--h) * 0.036); opacity: .85; font-weight: 600; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; text-shadow: 0 1px 4px #000; transition: opacity .35s; }
+.pj-root.has-ticker .pj-foot { bottom: calc(var(--h) * 0.1); }
+.pj-ticker { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--h) * 0.08); display: none;
+  align-items: center; overflow: hidden; background: rgba(0,0,0,.6); font-size: calc(var(--h) * 0.048);
+  font-weight: 600; border-top: 2px solid rgba(255,255,255,.25); }
+.pj-root.has-ticker .pj-ticker { display: flex; }
+.pj-ticker span { display: inline-block; white-space: nowrap; padding-left: 100%; animation: pjmarq 20s linear infinite; }
+@keyframes pjmarq { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+.pj-logoimg { height: calc(var(--h) * 0.32); width: auto; border-radius: 50%; margin-bottom: calc(var(--h) * 0.04);
+  filter: drop-shadow(0 4px 14px rgba(0,0,0,.6)); }
+.pj-logo-t { font-size: calc(var(--h) * 0.075); font-weight: 800; line-height: 1.15; text-shadow: 0 2px 8px #000; }
+.pj-logo-s { font-size: calc(var(--h) * 0.04); opacity: .8; margin-top: calc(var(--h) * 0.02); }
+.pj-clock-l { font-size: calc(var(--h) * 0.07); font-weight: 700; text-shadow: 0 2px 8px #000; }
+.pj-clock { font-size: calc(var(--h) * 0.3); font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.05;
+  text-shadow: 0 4px 14px #000; }
+.pj-clock.fin { animation: pjblink 1s step-end infinite; }
+@keyframes pjblink { 50% { opacity: .25; } }
+.pj-root.pj-black .pj-bg, .pj-root.pj-black .pj-img, .pj-root.pj-black .pj-stage,
+.pj-root.pj-black .pj-foot, .pj-root.pj-black .pj-ticker { opacity: 0 !important; }
+.pj-root.pj-clean .pj-stage, .pj-root.pj-clean .pj-foot { opacity: 0; }
+
+/* pantalla completa del data */
+body.pj-screen-mode { background: #000 !important; overflow: hidden; margin: 0; }
+body.pj-screen-mode > *:not(#pjScreen) { display: none !important; }
+#pjScreen { display: none; }
+body.pj-screen-mode #pjScreen { display: block; position: fixed; inset: 0; z-index: 9999; }
+#pjScreen.nocursor, #pjScreen.nocursor * { cursor: none; }
+.pj-msg { position: absolute; left: 0; right: 0; bottom: 2.5%; text-align: center; font-size: 15px;
+  color: rgba(255,255,255,.75); pointer-events: none; text-shadow: 0 1px 3px #000; }
+.pj-msg:empty { display: none; }
+.pj-offline { position: absolute; top: 10px; right: 12px; font-size: 13px; color: #ff8a8a; display: none;
+  background: rgba(0,0,0,.6); padding: 3px 10px; border-radius: 10px; }
+#pjScreen.pj-off .pj-offline { display: block; }
+.pj-hint { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,.7);
+  padding: 8px 16px; border-radius: 20px; font-size: 14px; transition: opacity .6s; pointer-events: none; }
+.pj-codebox { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center;
+  justify-content: center; gap: 16px; background: rgba(0,0,0,.55); z-index: 5; text-align: center; padding: 20px; }
+.pj-codebox.on { display: flex; }
+.pj-codebox h2 { font-size: 28px; margin: 0; }
+.pj-codebox p { font-size: 15px; opacity: .8; margin: 0; max-width: 520px; }
+.pj-codebox input { font-size: 54px; width: 230px; text-align: center; letter-spacing: .3em; border-radius: 14px;
+  border: none; padding: 8px; font-family: monospace; }
+.pj-codebox button { font-size: 20px; padding: 12px 34px; border-radius: 12px; border: none; background: #2a78d6;
+  color: #fff; font-weight: 700; cursor: pointer; }
+
+/* panel de control (iPad) */
+#view-proyectar.active { max-width: 1240px; }
+.pj-top { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 14px; margin-bottom: 12px; }
+.pj-prevwrap { position: relative; }
+.pj-prev { width: 100%; aspect-ratio: 16 / 9; border-radius: 10px; box-shadow: 0 4px 18px rgba(0,0,0,.25); }
+.pj-prevlbl { position: absolute; top: 8px; left: 8px; z-index: 3; background: #dc3545; color: #fff; font-size: .62rem;
+  font-weight: 800; letter-spacing: .08em; padding: 2px 8px; border-radius: 8px; }
+.pj-side { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.pj-status { font-size: .8rem; color: var(--text-secondary); background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 8px 10px; line-height: 1.5; }
+.pj-status b { color: var(--text-primary); }
+.pj-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #aaa; margin-right: 4px; }
+.pj-dot.ok { background: #1baf7a; }
+.pj-modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.pj-modes button, .pj-navbig button, .pj-tabs button, .pj-chip { border: 1px solid var(--border); background: var(--surface);
+  color: var(--text-primary); border-radius: 10px; padding: 10px 4px; font-weight: 700; font-size: .82rem; cursor: pointer; }
+.pj-modes button.on { background: var(--primary); color: #fff; border-color: var(--primary); }
+.pj-modes button.blk.on { background: #111; border-color: #111; }
+.pj-navbig { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pj-navbig button { padding: 18px 6px; font-size: 1.05rem; background: var(--primary); color: #fff; border-color: var(--primary); }
+.pj-navbig button:first-child { background: var(--surface-2); color: var(--text-primary); border-color: var(--border); }
+.pj-next { font-size: .74rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pj-tabs { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 10px; padding-bottom: 2px; }
+.pj-tabs button { padding: 9px 14px; white-space: nowrap; }
+.pj-tabs button.on { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
+.pj-cols { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 12px; align-items: start; }
+.pj-list { max-height: 62vh; overflow-y: auto; }
+.pj-song { padding: 8px 10px; border-radius: 9px; border: 1px solid var(--border); margin-bottom: 6px; cursor: pointer;
+  font-size: .84rem; background: var(--surface); }
+.pj-song.sel { border-color: var(--primary); background: var(--primary-light); }
+.pj-song .lv { color: #dc3545; font-weight: 800; font-size: .66rem; margin-left: 4px; }
+.pj-slides { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.pj-card { background: #14213d; color: #fff; border-radius: 9px; padding: 9px 10px 8px; font-size: .74rem; line-height: 1.35;
+  white-space: pre-line; min-height: 84px; cursor: pointer; border: 3px solid transparent; position: relative;
+  font-weight: 600; }
+.pj-card.live { border-color: #dc3545; box-shadow: 0 0 0 2px rgba(220,53,69,.3); }
+.pj-card .n { position: absolute; top: 3px; right: 7px; opacity: .55; font-size: .62rem; font-weight: 700; }
+.pj-card.biblia { background: #2a1f0f; }
+.pj-card.aviso { background: #1f2f1f; }
+.pj-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+.pj-row input, .pj-row select, .pj-area { border: 1px solid var(--border); border-radius: 9px; padding: 9px 10px;
+  font-size: .9rem; background: var(--surface); color: var(--text-primary); }
+.pj-area { width: 100%; min-height: 90px; font-family: inherit; box-sizing: border-box; }
+.pj-chip.on { background: var(--primary); color: #fff; border-color: var(--primary); }
+.pj-sw { width: 74px; height: 44px; border-radius: 9px; border: 3px solid transparent; cursor: pointer;
+  background-size: cover; background-position: center; }
+.pj-sw.on { border-color: var(--primary); }
+.pj-help { font-size: .76rem; color: var(--text-muted); margin: 6px 0 10px; line-height: 1.45; }
+.pj-h { font-size: .85rem; font-weight: 700; margin: 12px 0 6px; }
+.pj-empty { color: var(--text-muted); font-size: .85rem; padding: 18px; text-align: center; border: 1px dashed var(--border);
+  border-radius: 10px; }
+@media (max-width: 760px) {
+  .pj-top, .pj-cols { grid-template-columns: 1fr; }
+  .pj-list { max-height: 34vh; }
+  .pj-slides { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+}
+/* corista: estrofa que se esta proyectando */
+.fl-st.cur { background: var(--primary-light); box-shadow: 0 0 0 4px var(--primary-light); border-radius: 4px; }
+[data-theme="dark"] .fl-st.cur { background: rgba(42,120,214,.28); box-shadow: 0 0 0 4px rgba(42,120,214,.28); }
 </style>
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#1f6feb">
@@ -1774,6 +1896,7 @@ body {
   <button onclick="switchView('servicio', this)">Servicio</button>
   <button onclick="switchView('sala', this)">Sala</button>
   <button onclick="switchView('agregar', this)">Agregar</button>
+  <button id="navProj" onclick="switchView('proyectar', this)" style="display:none;">Proyectar</button>
 </nav>
 
 <!-- ═══════ HIMNARIO ═══════ -->
@@ -1873,7 +1996,8 @@ body {
       1. El director presiona "Crear Sala" y recibe un codigo de 4 digitos.<br>
       2. Comparte el codigo por WhatsApp al grupo de coristas.<br>
       3. Los coristas abren esta misma pagina, van a "Sala" y se unen con el codigo.<br>
-      4. Los cambios y la cancion actual se sincronizan en tiempo real.<br><br>
+      4. Los cambios y la cancion actual se sincronizan en tiempo real.<br>
+      5. <b>Proyector:</b> en el computador del data abre el link que muestra la pestaña <b>Proyectar</b> y controla todo desde el iPad.<br><br>
       <strong>Importante:</strong> La sala en vivo funciona por Firebase, asi que sirve en cualquier red: WiFi, datos moviles o entre ciudades distintas. Solo hace falta internet.<br><br>
       <span id="dirBadge" style="display:none;background:var(--success);color:#fff;padding:2px 8px;border-radius:10px;font-size:0.7rem;font-weight:600;">MODO DIRECTOR</span>
     </div>
@@ -1922,6 +2046,9 @@ body {
   <!-- Corista connected -->
   <div id="salaConnected" style="display:none;"></div>
 </div>
+
+<!-- ═══════ PROYECTAR (control del data) ═══════ -->
+<div id="view-proyectar" class="view"><div id="pjBody"></div></div>
 
 <!-- ═══════ AGREGAR ═══════ -->
 <div id="view-agregar" class="view">
@@ -2064,7 +2191,7 @@ const LOGO_PDF_URL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAYA
 const STORAGE_KEY = 'himnario_data';
 const SERVICE_KEY = 'himnario_service';
 const HYMNAL_VERSION = 'v20_completo';
-const APP_BUILD = 'v22';
+const APP_BUILD = 'v23';
 
 let hymns = [];
 let serviceList = [];
@@ -2147,6 +2274,7 @@ function switchView(view, btn) {
   document.querySelectorAll('#mainNav button').forEach(b => b.classList.remove('active'));
   document.getElementById('view-'+view).classList.add('active');
   if (btn) btn.classList.add('active');
+  if (view === 'proyectar') pjRenderView();
 }
 
 // ═══════════════════════════════════════
@@ -2369,6 +2497,7 @@ function setNowPlaying(idx) {
   renderServiceList(); broadcastState();
   if (nowPlayingIdx>=0) { showLiveBanner(serviceList[nowPlayingIdx].title); openLiveDirector(); }
   else { hideLiveBanner(); closeFullscreenLyrics(); }
+  pjFromService(nowPlayingIdx);
 }
 
 function showLiveBanner(t) { document.getElementById('liveBannerText').textContent='EN VIVO: '+t; document.getElementById('liveBanner').classList.add('active'); }
@@ -2658,6 +2787,8 @@ function updateDirectorUI() {
   set('btnDirLogout',  on);
   set('btnPublishLib', on);
   set('btnCreateRoom', on);
+  set('navProj', on);
+  if (typeof pjRenderView === 'function') pjRenderView();
   const b = document.getElementById('dirBadge');
   if (b) { b.style.display = on ? 'inline-block' : 'none'; }
 }
@@ -2765,10 +2896,21 @@ async function createRoom() {
   if (!await fbInit()) return;
   if (!fbIsDirector) { showToast('Entra como director primero'); return; }
   btn.disabled = true; btn.textContent = 'Creando...';
-  roomCode = genCode();
+  roomCode = (() => { try { return localStorage.getItem('sala_fija') || ''; } catch (e) { return ''; } })() || genCode();
+  try { localStorage.setItem('sala_fija', roomCode); } catch (e) {}
   role = 'director';
   try {
-    await FB.set(FB.ref(fbDb, 'salas/' + roomCode), {
+    // retomar una sala que ya esta abierta (otro aparato del director): usar su lista
+    try {
+      const prev = await FB.get(FB.ref(fbDb, 'salas/' + roomCode));
+      const pv = prev.exists() ? prev.val() : null;
+      if (pv && pv.activa && pv.serviceList) {
+        serviceList = Array.isArray(pv.serviceList) ? pv.serviceList : Object.values(pv.serviceList);
+        nowPlayingIdx = (pv.nowPlaying === undefined || pv.nowPlaying === null) ? -1 : pv.nowPlaying;
+        saveData(); renderServiceList();
+      }
+    } catch (e) {}
+    await FB.update(FB.ref(fbDb, 'salas/' + roomCode), {
       serviceList: serviceList || [],
       nowPlaying: nowPlayingIdx,
       fecha: document.getElementById('serviceDate').value || '',
@@ -2785,8 +2927,10 @@ async function createRoom() {
       const m = s.val() || {};
       memberNames = {};
       Object.keys(m).forEach(k => { memberNames[k] = m[k].nombre || 'Corista'; });
-      renderMembers();
+      pjScreens = Object.values(m).filter(x => x && x.pantalla).length;
+      renderMembers(); pjRenderStatus();
     });
+    pjOnRoomStart();
   } catch (e) {
     logTo('hostLog', 'Error: ' + (e.code || e.message), 'error');
     showToast('No se pudo crear la sala');
@@ -2822,6 +2966,7 @@ async function closeRoom() {
     if (fbReady && roomCode) await FB.remove(FB.ref(fbDb, 'salas/' + roomCode));
   } catch (e) {}
   roomCode = ''; role = null; memberNames = {};
+  pjOnRoomEnd();
   document.getElementById('salaHosting').style.display = 'none';
   document.getElementById('salaIdle').style.display = 'block';
   document.getElementById('hostLog').innerHTML = '';
@@ -2891,10 +3036,12 @@ async function joinRoom() {
     const d = s.val();
     serviceList = Array.isArray(d.serviceList) ? d.serviceList : Object.values(d.serviceList || {});
     nowPlayingIdx = (d.nowPlaying === undefined || d.nowPlaying === null) ? -1 : d.nowPlaying;
-    renderCoristaView();
+    const sig = JSON.stringify(serviceList) + '|' + nowPlayingIdx;
+    if (sig !== window._coristaSig) { window._coristaSig = sig; renderCoristaView(); }
     if (nowPlayingIdx >= 0 && serviceList[nowPlayingIdx]) showLiveBanner(serviceList[nowPlayingIdx].title);
     else hideLiveBanner();
     onLiveUpdate();
+    pjCoristaMark(d.proyector);
   }, (err) => {
     logTo('joinLog', 'Conexion perdida: ' + err.code, 'error');
   });
@@ -2921,7 +3068,7 @@ function leaveRoom() {
     if (fbReady && roomCode && fbUser)
       FB.remove(FB.ref(fbDb, 'salas/' + roomCode + '/miembros/' + fbUser.uid));
   } catch (e) {}
-  role = null; roomCode = ''; nowPlayingIdx = -1; lastLiveKey = '';
+  role = null; roomCode = ''; nowPlayingIdx = -1; lastLiveKey = ''; window._coristaSig = '';
   closeFullscreenLyrics();
   document.getElementById('coristaView').style.display = 'none';
   document.getElementById('mainNav').style.display = 'flex';
@@ -3055,6 +3202,7 @@ function toggleBigScreen() {
 function openLyricsView(h, opts) {
   if (!h) return;
   opts = opts || {};
+  flShownIdx = opts.idx !== undefined ? opts.idx : -1;
   const n = hymnNum(h);
   document.getElementById('flTitle').innerHTML =
     (n !== null ? '<span style="opacity:.85">' + n + ' &middot; </span>' : '') + esc(h.title) +
@@ -3073,7 +3221,7 @@ function openLyricsView(h, opts) {
     document.getElementById('flPrev').disabled = opts.idx <= 0;
     document.getElementById('flNext').disabled = opts.idx >= opts.total - 1;
   }
-  requestAnimationFrame(fitLyrics);
+  requestAnimationFrame(() => { fitLyrics(); pjCoristaMark(pjLastRemote); });
   keepAwake(true);
 }
 
@@ -3095,6 +3243,7 @@ function goLive(idx) {
   renderServiceList(); broadcastState();
   showLiveBanner(serviceList[idx].title);
   openLiveDirector();
+  pjFromService(idx);
 }
 
 /* Corista: abrir sola la cancion que el director marca, una vez por cancion */
@@ -3148,8 +3297,755 @@ function showToast(msg){const t=document.getElementById('toast');t.textContent=m
 
 document.querySelectorAll('.modal-overlay').forEach(o=>{o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('active');});});
 
+
+// ═══════════════════════════════════════
+// PROYECTOR (como VideoPsalm)
+// El director controla desde el iPad; la pantalla del data abre
+// ...himnario-/?pantalla=CODIGO y cambia sola por Firebase.
+// ═══════════════════════════════════════
+const PJ_FONDOS = {
+  negro:     '#000',
+  noche:     'linear-gradient(160deg,#0b1a3a 0%,#020617 100%)',
+  azul:      'linear-gradient(135deg,#1e3c72 0%,#2a5298 100%)',
+  cielo:     'radial-gradient(ellipse at 50% 0%,#3d74b0 0%,#0b1a33 75%)',
+  vino:      'linear-gradient(135deg,#3a0d1e 0%,#7a1f3d 100%)',
+  bosque:    'linear-gradient(135deg,#0c2a1b 0%,#1f5e3b 100%)',
+  morado:    'linear-gradient(160deg,#1d0b3a 0%,#5b2a86 100%)',
+  dorado:    'linear-gradient(135deg,#2e2000 0%,#7d5a00 100%)',
+  gris:      'linear-gradient(135deg,#1c1d1f 0%,#3d3f42 100%)'
+};
+const PJ_FONDO_NOMBRES = { negro:'Negro', noche:'Noche', azul:'Azul', cielo:'Cielo', vino:'Vino', bosque:'Bosque',
+  morado:'Morado', dorado:'Dorado', gris:'Gris', img:'Mi imagen' };
+
+function pjDefaults() {
+  return { modo: 'logo', slide: null, fondo: 'noche', estilo: { tam: 1, mayus: false, pie: true },
+           ticker: { on: false, texto: '' }, reloj: null, v: 0 };
+}
+let pjState = (() => {
+  const d = pjDefaults();
+  try { const s = JSON.parse(localStorage.getItem('pj_state') || 'null'); if (s) Object.assign(d, s); } catch (e) {}
+  d.estilo = Object.assign({ tam: 1, mayus: false, pie: true }, d.estilo || {});
+  d.ticker = Object.assign({ on: false, texto: '' }, d.ticker || {});
+  return d;
+})();
+let pjImg = (() => { try { return localStorage.getItem('pj_img') || ''; } catch (e) { return ''; } })();
+let pjDeck = { tipo: '', items: [], idx: -1, songIdx: -1 };
+let pjTab = 'canciones', pjSel = -1, pjSearchQ = '', pjScreens = 0, pjOffset = 0;
+let pjUnsubs = [], pjOffWatch = false, pjLastRemote = null, flShownIdx = -1;
+
+function pjLogoSrc() { const i = document.querySelector('.header img'); return i ? i.src : ''; }
+
+// ─── Dibujar una pantalla (la del data o la vista previa del iPad) ───
+function pjEnsure(root) {
+  if (root._pj) return;
+  root._pj = true;
+  root.classList.add('pj-root');
+  root.insertAdjacentHTML('afterbegin',
+    '<div class="pj-bg"></div><div class="pj-img"></div>' +
+    '<div class="pj-stage"><div class="pj-layer"></div><div class="pj-layer"></div></div>' +
+    '<div class="pj-foot"></div><div class="pj-ticker"><span></span></div>');
+  root._cur = 0;
+}
+
+function pjFitLayer(layer, tam) {
+  const t = layer.querySelector('.pj-txt');
+  if (!t) return;
+  const W = layer.clientWidth, H = layer.clientHeight;
+  if (!W || !H) return;
+  let lo = 6, hi = Math.max(10, Math.round(H * 0.15 * (tam || 1)));
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    t.style.fontSize = mid + 'px';
+    if (t.scrollWidth <= W + 1 && t.scrollHeight <= H + 1) lo = mid; else hi = mid - 1;
+  }
+  t.style.fontSize = lo + 'px';
+}
+
+function pjFmtClock(ms) {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  const m = Math.floor(s / 60), r = s % 60;
+  return (m < 10 ? '0' : '') + m + ':' + (r < 10 ? '0' : '') + r;
+}
+
+function pjRender(root, st, img) {
+  if (!root) return;
+  pjEnsure(root);
+  st = st || pjDefaults();
+  root._st = st;
+  const W = root.clientWidth, H = root.clientHeight;
+  root.style.setProperty('--h', H + 'px');
+  const est = Object.assign({ tam: 1, mayus: false, pie: true }, st.estilo || {});
+  const modo = st.modo || 'logo';
+
+  // fondo
+  const f = st.fondo || 'noche';
+  root.querySelector('.pj-bg').style.background = PJ_FONDOS[f] || PJ_FONDOS.noche;
+  const im = root.querySelector('.pj-img');
+  if (f === 'img' && img) { if (im._src !== img) { im.style.backgroundImage = 'url("' + img + '")'; im._src = img; } im.style.opacity = 1; }
+  else im.style.opacity = 0;
+
+  root.classList.toggle('pj-black', modo === 'negro');
+  root.classList.toggle('pj-clean', modo === 'limpio');
+
+  // texto deslizante
+  const tk = st.ticker || {};
+  const tkOn = !!(tk.on && tk.texto) && modo !== 'negro';
+  root.classList.toggle('has-ticker', tkOn);
+  const sp = root.querySelector('.pj-ticker span');
+  if (sp.textContent !== (tk.texto || '')) {
+    sp.textContent = tk.texto || '';
+    sp.style.animationDuration = Math.max(12, (tk.texto || '').length * 0.32) + 's';
+  }
+
+  // contenido
+  let html = '', key = '';
+  const sl = st.slide;
+  if ((modo === 'texto' || modo === 'limpio' || modo === 'negro') && sl && sl.texto) {
+    const cls = 'pj-txt' + (est.mayus ? ' up' : '') + (sl.tipo === 'biblia' ? ' biblia' : '');
+    html = '<div class="' + cls + '">' + esc(sl.texto) + '</div>';
+    key = 't|' + sl.texto + '|' + est.mayus + '|' + est.tam + '|' + sl.tipo;
+  } else if (modo === 'reloj' && st.reloj) {
+    html = '<div class="pj-clock-l">' + esc(st.reloj.texto || '') + '</div><div class="pj-clock">--:--</div>';
+    key = 'r|' + st.reloj.hasta + '|' + st.reloj.texto;
+  } else if (modo === 'logo' || modo === 'texto') {
+    const src = pjLogoSrc();
+    html = (src ? '<img class="pj-logoimg" src="' + src + '" alt="">' : '') +
+      '<div class="pj-logo-t">Iglesia Pentecostal<br>El Bosque</div>';
+    key = 'logo';
+  }
+  key += '|' + W + 'x' + H + (tkOn ? '|tk' : '');
+
+  const foot = root.querySelector('.pj-foot');
+  foot.textContent = (modo === 'texto' && est.pie !== false && sl && sl.ref) ? sl.ref : '';
+
+  if (root._key !== key) {
+    root._key = key;
+    const layers = root.querySelectorAll('.pj-layer');
+    const next = layers[root._cur ? 0 : 1], prev = layers[root._cur ? 1 : 0];
+    next.innerHTML = html;
+    pjFitLayer(next, est.tam);
+    next.classList.add('on'); prev.classList.remove('on');
+    root._cur = root._cur ? 0 : 1;
+    pjTick(root);
+  }
+}
+
+function pjTick(root) {
+  if (!root || !root._st || root._st.modo !== 'reloj' || !root._st.reloj) return;
+  const layers = root.querySelectorAll('.pj-layer');
+  const c = layers[root._cur ? 1 : 0].querySelector('.pj-clock');
+  if (!c) return;
+  const rem = root._st.reloj.hasta - (Date.now() + pjOffset);
+  const txt = pjFmtClock(rem);
+  if (c.textContent !== txt) c.textContent = txt;
+  c.classList.toggle('fin', rem <= 0);
+}
+setInterval(() => { pjTick(document.getElementById('pjScreen')); pjTick(document.getElementById('pjPreview')); }, 250);
+
+function pjWatchOffset() {
+  if (pjOffWatch || !fbReady) return;
+  pjOffWatch = true;
+  try { FB.onValue(FB.ref(fbDb, '.info/serverTimeOffset'), s => { pjOffset = s.val() || 0; }); } catch (e) {}
+}
+
+// ═══════════════ PANTALLA DEL DATA ═══════════════
+async function pjStartScreen(code) {
+  document.body.classList.add('pj-screen-mode');
+  document.title = 'Pantalla · Himnario IPB';
+  const root = document.getElementById('pjScreen');
+  let st = null, img = '';
+  const draw = () => pjRender(root, st || { modo: 'logo', fondo: 'noche' }, img);
+  draw();
+  window.addEventListener('resize', () => { root._key = ''; draw(); });
+  const msg = t => { document.getElementById('pjMsg').textContent = t || ''; };
+
+  if (!/^\d{4}$/.test(code)) {
+    document.getElementById('pjCodeBox').classList.add('on');
+    setTimeout(() => { const i = document.getElementById('pjCodeIn'); if (i) i.focus(); }, 200);
+    return;
+  }
+  try { localStorage.setItem('pj_code', code); } catch (e) {}
+  msg('Conectando a la sala ' + code + '...');
+
+  if (!await fbInit(true)) {
+    msg('Sin conexion. Reintentando...');
+    setTimeout(() => location.reload(), 15000);
+    return;
+  }
+  pjWatchOffset();
+  const base = 'salas/' + code;
+  FB.onValue(FB.ref(fbDb, base + '/proyector'), s => { st = s.val(); draw(); });
+  FB.onValue(FB.ref(fbDb, base + '/fondoImg'), s => { img = s.val() || ''; draw(); });
+
+  const me = FB.ref(fbDb, base + '/miembros/' + fbUser.uid);
+  let activa = false;
+  const reg = () => {
+    FB.set(me, { nombre: 'Pantalla (proyector)', pantalla: true, desde: FB.serverTimestamp() }).catch(() => {});
+    try { FB.onDisconnect(me).remove(); } catch (e) {}
+  };
+  FB.onValue(FB.ref(fbDb, base + '/activa'), s => {
+    activa = !!s.val();
+    msg(activa ? '' : 'Esperando al director  ·  Sala ' + code);
+    if (activa) reg();
+  });
+  FB.onValue(me, s => { if (!s.exists() && activa) reg(); });
+  FB.onValue(FB.ref(fbDb, '.info/connected'), s => root.classList.toggle('pj-off', s.val() === false));
+
+  // pantalla encendida, cursor oculto, pantalla completa
+  let wl = null;
+  const lock = async () => { try { if ('wakeLock' in navigator && !wl) { wl = await navigator.wakeLock.request('screen'); wl.addEventListener('release', () => { wl = null; }); } } catch (e) {} };
+  lock();
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) lock(); });
+  let ct = null;
+  const wake = () => { root.classList.remove('nocursor'); clearTimeout(ct); ct = setTimeout(() => root.classList.add('nocursor'), 2500); };
+  root.addEventListener('mousemove', wake); wake();
+  const fs = () => { try { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); } catch (e) {} };
+  root.addEventListener('click', fs);
+  window.addEventListener('keydown', e => { if (e.key === 'f' || e.key === 'F') fs(); });
+  const hint = document.getElementById('pjHint');
+  setTimeout(() => { if (hint) hint.style.opacity = 0; }, 6000);
+}
+
+function pjCodeGo() {
+  const v = (document.getElementById('pjCodeIn').value || '').replace(/\D/g, '');
+  if (v.length !== 4) return;
+  location.search = '?pantalla=' + v;
+}
+
+// ═══════════════ PANEL DE CONTROL ═══════════════
+function pjSaveLocal() {
+  try {
+    const s = Object.assign({}, pjState); delete s.slide;
+    if (s.modo === 'texto' || s.modo === 'reloj') s.modo = 'logo';
+    localStorage.setItem('pj_state', JSON.stringify(s));
+  } catch (e) {}
+}
+
+function pjPush() {
+  pjState.v = Date.now() + Math.random();
+  pjSaveLocal();
+  pjRenderLive();
+  if (role === 'director' && roomCode && fbReady)
+    FB.update(FB.ref(fbDb, 'salas/' + roomCode), { proyector: JSON.parse(JSON.stringify(pjState)) })
+      .catch(e => console.warn('proyector:', e.code || e));
+}
+function pjPushImg() {
+  if (role === 'director' && roomCode && fbReady)
+    FB.update(FB.ref(fbDb, 'salas/' + roomCode), { fondoImg: pjImg || null }).catch(() => {});
+}
+
+/* Al abrir (o retomar) la sala: retomar lo que ya esta proyectado o publicar lo local */
+function pjOnRoomStart() {
+  pjWatchOffset();
+  pjUnsubs.forEach(u => { try { u(); } catch (e) {} }); pjUnsubs = [];
+  let first = true, firstImg = true;
+  pjUnsubs.push(FB.onValue(FB.ref(fbDb, 'salas/' + roomCode + '/proyector'), s => {
+    const v = s.val();
+    if (first) { first = false; if (!v) { pjPush(); return; } }
+    if (v && v.v !== pjState.v) {           // otro control (celular del director) cambio algo
+      pjState = Object.assign(pjDefaults(), v);
+      pjState.estilo = Object.assign({ tam: 1, mayus: false, pie: true }, v.estilo || {});
+      pjState.ticker = Object.assign({ on: false, texto: '' }, v.ticker || {});
+      pjSaveLocal(); pjRenderLive();
+    }
+  }));
+  pjUnsubs.push(FB.onValue(FB.ref(fbDb, 'salas/' + roomCode + '/fondoImg'), s => {
+    const v = s.val() || '';
+    if (firstImg) { firstImg = false; if (!v && pjImg) { pjPushImg(); return; } }
+    if (v !== pjImg) { pjImg = v; try { localStorage.setItem('pj_img', v); } catch (e) {} pjRenderLive(); if (pjTab === 'fondo') pjRenderTab(); }
+  }));
+  pjUnsubs.push(FB.onValue(FB.ref(fbDb, 'salas/' + roomCode + '/serviceList'), s => {
+    const v = s.val(); if (!v) return;
+    const list = Array.isArray(v) ? v : Object.values(v);
+    if (JSON.stringify(list) !== JSON.stringify(serviceList)) {
+      serviceList = list; saveData(); renderServiceList();
+      if (pjTab === 'canciones') pjRenderSongList();
+    }
+  }));
+  pjUnsubs.push(FB.onValue(FB.ref(fbDb, 'salas/' + roomCode + '/nowPlaying'), s => {
+    const v = s.val(); const n = (v === null || v === undefined) ? -1 : v;
+    if (n !== nowPlayingIdx) {
+      nowPlayingIdx = n; renderServiceList();
+      if (n >= 0 && serviceList[n]) showLiveBanner(serviceList[n].title); else hideLiveBanner();
+      if (pjTab === 'canciones') pjRenderSongList();
+    }
+  }));
+  pjRenderView();
+}
+async function pjOpenRoom() {
+  const c = (document.getElementById('pjSalaCode').value || '').replace(/\D/g, '');
+  if (c && c.length !== 4) { showToast('El codigo debe tener 4 digitos'); return; }
+  try { if (c) localStorage.setItem('sala_fija', c); } catch (e) {}
+  await createRoom();
+  pjRenderView();
+}
+function pjOnRoomEnd() { pjUnsubs.forEach(u => { try { u(); } catch (e) {} }); pjUnsubs = []; pjScreens = 0; pjRenderView(); }
+
+function pjScreenURL() { return location.origin + location.pathname + '?pantalla=' + (roomCode || localStorage.getItem('sala_fija') || ''); }
+
+// ─── Diapositivas ───
+function pjSongSlides(h, songIdx) {
+  const n = hymnNum(h);
+  const ref = (n !== null ? n + ' · ' : '') + h.title;
+  const out = [];
+  liveLyrics(h).replace(/\s+$/, '').split(/\n[ \t]*\n+/).forEach((st, si) => {
+    const lines = st.split('\n').map(l => l.trim()).filter(Boolean);
+    if (!lines.length) return;
+    lines[0] = lines[0].replace(/^\d+\s*[.)\-–]\s*/, '');
+    const parts = lines.length <= 6 ? 1 : Math.ceil(lines.length / 5);
+    const per = Math.ceil(lines.length / parts);
+    for (let p = 0; p < parts; p++) {
+      const seg = lines.slice(p * per, (p + 1) * per);
+      if (seg.length) out.push({ tipo: 'cancion', texto: seg.join('\n'), ref: ref, st: si, songIdx: songIdx });
+    }
+  });
+  return out;
+}
+
+function pjLoadSong(idx, hymn) {
+  const h = hymn || serviceList[idx];
+  if (!h) return false;
+  pjDeck = { tipo: 'cancion', items: pjSongSlides(h, hymn ? -1 : idx), idx: -1, songIdx: hymn ? -1 : idx, titulo: h.title };
+  pjSel = hymn ? -1 : idx;
+  return true;
+}
+
+function pjGo(i) {
+  const it = pjDeck.items[i];
+  if (!it) return;
+  pjDeck.idx = i;
+  pjState.slide = it;
+  pjState.modo = 'texto';
+  if (pjDeck.tipo === 'cancion' && pjDeck.songIdx >= 0 && serviceList[pjDeck.songIdx] && nowPlayingIdx !== pjDeck.songIdx) {
+    nowPlayingIdx = pjDeck.songIdx;       // los coristas abren la misma cancion
+    renderServiceList(); broadcastState();
+    showLiveBanner(serviceList[nowPlayingIdx].title);
+    if (pjTab === 'canciones') pjRenderSongList();
+  }
+  pjPush();
+  pjMarkCards(true);
+}
+
+function pjNext() {
+  if (pjDeck.idx < pjDeck.items.length - 1) return pjGo(pjDeck.idx + 1);
+  if (pjDeck.tipo === 'cancion' && pjDeck.songIdx >= 0 && pjDeck.songIdx < serviceList.length - 1) {
+    pjLoadSong(pjDeck.songIdx + 1); pjRenderTab(); return pjGo(0);
+  }
+  if (pjDeck.tipo === 'biblia' && BIBLIA) {
+    const b = BIBLIA[pjDeck.b];
+    if (pjDeck.c < b[1].length - 1) { pjLoadChapter(pjDeck.b, pjDeck.c + 1); pjRenderTab(); return pjGo(0); }
+  }
+  showToast('Fin');
+}
+function pjPrev() {
+  if (pjDeck.idx > 0) return pjGo(pjDeck.idx - 1);
+  if (pjDeck.tipo === 'cancion' && pjDeck.songIdx > 0) {
+    pjLoadSong(pjDeck.songIdx - 1); pjRenderTab(); return pjGo(pjDeck.items.length - 1);
+  }
+  if (pjDeck.tipo === 'biblia' && BIBLIA && pjDeck.c > 0) {
+    pjLoadChapter(pjDeck.b, pjDeck.c - 1); pjRenderTab(); return pjGo(pjDeck.items.length - 1);
+  }
+}
+
+function pjMode(m) {
+  if (m === 'texto' && !pjState.slide) { showToast('Elige una diapositiva'); return; }
+  if (m === 'negro' && pjState.modo === 'negro') m = pjState.slide ? 'texto' : 'logo';
+  pjState.modo = m;
+  pjPush();
+}
+
+/* El director toco "Cantar" en el Servicio: proyectar esa cancion */
+function pjFromService(idx) {
+  if (role !== 'director' || !roomCode) return;
+  if (idx < 0) { if (pjState.modo === 'texto') { pjState.modo = 'limpio'; pjPush(); } return; }
+  if (pjDeck.tipo === 'cancion' && pjDeck.songIdx === idx && pjDeck.idx >= 0) return;
+  if (pjLoadSong(idx)) { if (pjTab === 'canciones') pjRenderTab(); pjGo(0); }
+}
+
+// ─── Biblia (Reina-Valera 1909, dominio publico) ───
+let BIBLIA = null, pjBibP = null, pjBibNorm = null;
+function pjLoadBible() {
+  if (BIBLIA) return Promise.resolve(BIBLIA);
+  if (!pjBibP) pjBibP = fetch('./biblia.json').then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(d => (BIBLIA = d)).catch(e => { pjBibP = null; throw e; });
+  return pjBibP;
+}
+const PJ_ALIAS = { sal: 'salmos', salmo: 'salmos', sl: 'salmos', cant: 'cantares', cantar: 'cantares', apoc: 'apocalipsis',
+  ap: 'apocalipsis', hch: 'hechos', mt: 'mateo', mr: 'marcos', mc: 'marcos', lc: 'lucas', jn: 'juan', gn: 'genesis',
+  ex: 'exodo', ro: 'romanos', rom: 'romanos', is: 'isaias', jer: 'jeremias', pr: 'proverbios', prov: 'proverbios',
+  stgo: 'santiago', sant: 'santiago', heb: 'hebreos', ef: 'efesios', fil: 'filipenses', col: 'colosenses', gal: 'galatas' };
+function pjFindBook(q) {
+  let nq = normTxt(q).replace(/ /g, '');
+  if (!nq) return -1;
+  nq = nq.replace(/^(primera|primero|1ra|1a)de?/, '1').replace(/^(segunda|segundo|2da|2a)de?/, '2').replace(/^(tercera|tercero|3ra|3a)de?/, '3');
+  const m = /^(\d?)(.*)$/.exec(nq);
+  if (PJ_ALIAS[m[2]]) nq = m[1] + PJ_ALIAS[m[2]];
+  const keys = BIBLIA.map(b => normTxt(b[0]).replace(/ /g, ''));
+  let i = keys.indexOf(nq);
+  if (i < 0) i = keys.findIndex(k => k.startsWith(nq));
+  return i;
+}
+function pjParseRef(q) {
+  const m = /^\s*((?:[1-3]\s*)?[^\d:]+?)\s*(\d+)(?:\s*[:.,]\s*(\d+)(?:\s*-\s*(\d+))?)?\s*$/.exec(q || '');
+  if (!m) return null;
+  const b = pjFindBook(m[1]);
+  if (b < 0) return null;
+  const c = parseInt(m[2], 10) - 1;
+  if (c < 0 || c >= BIBLIA[b][1].length) return null;
+  const nv = BIBLIA[b][1][c].length;
+  const v = m[3] ? Math.min(nv, Math.max(1, parseInt(m[3], 10))) - 1 : 0;
+  return { b, c, v };
+}
+function pjLoadChapter(b, c) {
+  const book = BIBLIA[b];
+  pjDeck = { tipo: 'biblia', b, c, idx: -1, songIdx: -1,
+    items: book[1][c].map((t, i) => ({ tipo: 'biblia', texto: t, ref: book[0] + ' ' + (c + 1) + ':' + (i + 1) + '  ·  RV 1909' })) };
+}
+async function pjBibGo() {
+  const q = document.getElementById('pjRef').value;
+  try { await pjLoadBible(); } catch (e) { showToast('No se pudo cargar la Biblia (sin internet?)'); return; }
+  const r = pjParseRef(q);
+  if (!r) {
+    if (normTxt(q).length >= 3) return pjBibSearch(q);
+    showToast('Escribe por ejemplo: Juan 3:16'); return;
+  }
+  pjLoadChapter(r.b, r.c);
+  pjRenderTab();
+  pjGo(r.v);
+}
+async function pjBibOpenSel() {
+  try { await pjLoadBible(); } catch (e) { showToast('No se pudo cargar la Biblia'); return; }
+  const b = +document.getElementById('pjBook').value, c = +document.getElementById('pjCap').value;
+  pjLoadChapter(b, c); pjRenderTab();
+}
+function pjBibBookChange() {
+  const b = +document.getElementById('pjBook').value;
+  const n = BIBLIA ? BIBLIA[b][1].length : 1;
+  document.getElementById('pjCap').innerHTML = Array.from({ length: n }, (_, i) => '<option value="' + i + '">' + (i + 1) + '</option>').join('');
+}
+function pjBibSearch(q) {
+  const nq = normTxt(q);
+  if (!pjBibNorm) pjBibNorm = BIBLIA.map(b => b[1].map(ch => ch.map(v => ' ' + normTxt(v) + ' ')));
+  const res = [];
+  for (let b = 0; b < BIBLIA.length && res.length < 150; b++)
+    for (let c = 0; c < BIBLIA[b][1].length && res.length < 150; c++)
+      pjBibNorm[b][c].forEach((v, i) => { if (res.length < 150 && v.includes(' ' + nq)) res.push([b, c, i]); });
+  pjDeck = { tipo: 'busqueda', items: [], idx: -1, songIdx: -1, res: res, q: q };
+  pjRenderTab();
+}
+function pjBibPick(b, c, v) { pjLoadChapter(b, c); pjRenderTab(); pjGo(v); }
+
+// ─── Avisos y texto deslizante ───
+function pjAvisos() { try { return JSON.parse(localStorage.getItem('pj_avisos') || '[]'); } catch (e) { return []; } }
+function pjAvisoShow(txt) {
+  txt = (txt === undefined ? document.getElementById('pjAvisoTxt').value : txt).trim();
+  if (!txt) { showToast('Escribe el aviso'); return; }
+  pjDeck = { tipo: 'aviso', items: [{ tipo: 'aviso', texto: txt, ref: '' }], idx: -1, songIdx: -1 };
+  pjGo(0);
+}
+function pjAvisoSave() {
+  const t = document.getElementById('pjAvisoTxt').value.trim();
+  if (!t) return;
+  const a = pjAvisos(); if (!a.includes(t)) a.unshift(t);
+  try { localStorage.setItem('pj_avisos', JSON.stringify(a.slice(0, 30))); } catch (e) {}
+  pjRenderTab();
+}
+function pjAvisoDel(i) { const a = pjAvisos(); a.splice(i, 1); try { localStorage.setItem('pj_avisos', JSON.stringify(a)); } catch (e) {} pjRenderTab(); }
+function pjTicker(on) {
+  const t = document.getElementById('pjTickTxt').value.trim();
+  pjState.ticker = { on: !!(on && t), texto: t };
+  pjPush(); pjRenderTab();
+}
+
+// ─── Cuenta regresiva ───
+function pjClock(min) {
+  if (min === undefined) min = parseFloat(document.getElementById('pjClockMin').value);
+  if (!(min > 0)) { showToast('Indica los minutos'); return; }
+  const t = document.getElementById('pjClockTxt').value.trim();
+  pjState.reloj = { hasta: Date.now() + pjOffset + Math.round(min * 60000), texto: t };
+  pjState.modo = 'reloj';
+  pjPush();
+}
+
+// ─── Fondo y estilo ───
+function pjSetFondo(f) {
+  if (f === 'img' && !pjImg) { document.getElementById('pjImgIn').click(); return; }
+  pjState.fondo = f; pjPush(); pjRenderTab();
+}
+function pjImgFile(inp) {
+  const file = inp.files && inp.files[0];
+  if (!file) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    const im = new Image();
+    im.onload = () => {
+      const sc = Math.min(1, 1600 / im.width, 900 / im.height);
+      const cv = document.createElement('canvas');
+      cv.width = Math.round(im.width * sc); cv.height = Math.round(im.height * sc);
+      cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height);
+      let q = 0.75, data = cv.toDataURL('image/jpeg', q);
+      while (data.length > 450000 && q > 0.35) { q -= 0.1; data = cv.toDataURL('image/jpeg', q); }
+      pjImg = data;
+      try { localStorage.setItem('pj_img', data); } catch (e) {}
+      pjState.fondo = 'img';
+      pjPushImg(); pjPush(); pjRenderTab();
+    };
+    im.src = rd.result;
+  };
+  rd.readAsDataURL(file);
+  inp.value = '';
+}
+function pjEstilo(k, v) {
+  if (k === 'tam') pjState.estilo.tam = Math.max(0.5, Math.min(1.8, Math.round((pjState.estilo.tam + v) * 10) / 10));
+  else pjState.estilo[k] = v;
+  pjPush(); pjRenderTab();
+}
+
+// ─── Teclado / control remoto de presentaciones ───
+window.addEventListener('keydown', e => {
+  const v = document.getElementById('view-proyectar');
+  if (!v || !v.classList.contains('active') || document.body.classList.contains('pj-screen-mode')) return;
+  const tg = (e.target.tagName || '').toLowerCase();
+  if (tg === 'input' || tg === 'textarea' || tg === 'select') return;
+  const k = e.key;
+  if (k === 'ArrowRight' || k === 'ArrowDown' || k === 'PageDown' || k === ' ') { e.preventDefault(); pjNext(); }
+  else if (k === 'ArrowLeft' || k === 'ArrowUp' || k === 'PageUp') { e.preventDefault(); pjPrev(); }
+  else if (k === 'b' || k === 'B' || k === '.') pjMode('negro');
+  else if (k === 'l' || k === 'L') pjMode('logo');
+  else if (k === 'c' || k === 'C') pjMode('limpio');
+  else if (k === 't' || k === 'T' || k === 'Enter') pjMode('texto');
+});
+
+// ─── Interfaz del panel ───
+function pjRenderLive() {
+  const pv = document.getElementById('pjPreview');
+  if (pv && pv.offsetParent !== null) pjRender(pv, pjState, pjImg);
+  document.querySelectorAll('#pjModes button').forEach(b => b.classList.toggle('on', b.dataset.m === pjState.modo));
+  const nx = document.getElementById('pjNextTxt');
+  if (nx) {
+    const it = pjDeck.items[pjDeck.idx + 1];
+    nx.textContent = it ? 'Sigue: ' + it.texto.split('\n')[0]
+      : (pjDeck.tipo === 'cancion' && serviceList[pjDeck.songIdx + 1] && pjDeck.songIdx >= 0 ? 'Sigue: ' + serviceList[pjDeck.songIdx + 1].title : '');
+  }
+  pjMarkCards(false);
+}
+window.addEventListener('resize', () => { const pv = document.getElementById('pjPreview'); if (pv) { pv._key = ''; pjRenderLive(); } });
+
+function pjMarkCards(scroll) {
+  const live = pjState.slide;
+  document.querySelectorAll('#pjSlides .pj-card').forEach(c => {
+    const on = live && pjState.modo !== 'logo' && pjState.modo !== 'reloj' && +c.dataset.i === pjDeck.idx &&
+      pjDeck.items[pjDeck.idx] && pjDeck.items[pjDeck.idx].texto === live.texto;
+    c.classList.toggle('live', !!on);
+    if (on && scroll) c.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  });
+}
+
+function pjRenderStatus() {
+  const el = document.getElementById('pjStatus');
+  if (!el) return;
+  const url = pjScreenURL();
+  el.innerHTML = roomCode
+    ? 'Sala <b>' + roomCode + '</b> &nbsp; <span class="pj-dot ' + (pjScreens ? 'ok' : '') + '"></span>' +
+      (pjScreens ? '<b>Pantalla conectada</b>' : 'Sin pantalla conectada') +
+      '<br>En el computador del data abre:<br><b style="word-break:break-all;">' + esc(url) + '</b>' +
+      '<div class="pj-row" style="margin:6px 0 0;"><button class="pj-chip" onclick="pjCopyURL()">Copiar link</button>' +
+      '<button class="pj-chip" onclick="window.open(pjScreenURL(),\'pantallaIPB\')">Abrir pantalla aqui</button></div>'
+    : 'La sala no esta abierta.';
+}
+function pjCopyURL() {
+  const u = pjScreenURL();
+  navigator.clipboard.writeText(u).then(() => showToast('Link copiado')).catch(() => showToast(u));
+}
+
+function pjRenderView() {
+  const v = document.getElementById('view-proyectar');
+  if (!v || !v.classList.contains('active')) return;
+  const box = document.getElementById('pjBody');
+  if (!fbIsDirector) {
+    box.innerHTML = '<div class="pj-empty">Para controlar el proyector entra como director en la pestaña <b>Sala</b>.</div>';
+    return;
+  }
+  if (role !== 'director' || !roomCode) {
+    let sf = ''; try { sf = localStorage.getItem('sala_fija') || ''; } catch (e) {}
+    box.innerHTML = '<div class="pj-empty"><p style="margin-bottom:12px;">Abre la sala para conectar la pantalla del data y a los coristas.</p>' +
+      '<div class="pj-row" style="justify-content:center;"><span>Codigo de la sala</span>' +
+      '<input id="pjSalaCode" inputmode="numeric" maxlength="4" style="width:90px;text-align:center;font-family:monospace;font-size:1.1rem;letter-spacing:.15em;" ' +
+      'value="' + esc(sf) + '" placeholder="auto" oninput="this.value=this.value.replace(/\\D/g,\'\')"></div>' +
+      '<button class="btn btn-primary btn-lg" onclick="pjOpenRoom()">Abrir sala y proyectar</button>' +
+      '<p class="pj-help" style="margin-top:12px;">El codigo queda fijo: el computador del data siempre abre el mismo link. ' +
+      'Si controlas desde dos aparatos (iPad y celular), usa el mismo codigo en ambos.</p></div>';
+    return;
+  }
+  box.innerHTML = `
+  <div class="pj-top">
+    <div class="pj-prevwrap"><span class="pj-prevlbl">EN PANTALLA</span><div class="pj-prev" id="pjPreview"></div></div>
+    <div class="pj-side">
+      <div class="pj-status" id="pjStatus"></div>
+      <div class="pj-modes" id="pjModes">
+        <button data-m="texto" onclick="pjMode('texto')">Texto</button>
+        <button data-m="limpio" onclick="pjMode('limpio')">Limpiar</button>
+        <button data-m="logo" onclick="pjMode('logo')">Logo</button>
+        <button data-m="negro" class="blk" onclick="pjMode('negro')">Negro</button>
+      </div>
+      <div class="pj-navbig"><button onclick="pjPrev()">&#8249; Anterior</button><button onclick="pjNext()">Siguiente &#8250;</button></div>
+      <div class="pj-next" id="pjNextTxt"></div>
+    </div>
+  </div>
+  <div class="pj-tabs" id="pjTabs">
+    ${[['canciones', 'Canciones'], ['biblia', 'Biblia'], ['avisos', 'Avisos'], ['reloj', 'Cuenta regresiva'], ['fondo', 'Fondo y letra']]
+      .map(t => `<button data-t="${t[0]}" class="${pjTab === t[0] ? 'on' : ''}" onclick="pjSetTab('${t[0]}')">${t[1]}</button>`).join('')}
+  </div>
+  <div id="pjTab"></div>`;
+  pjRenderStatus();
+  const pv = document.getElementById('pjPreview'); pv._pj = false; pv._key = '';
+  pjRenderTab();
+  requestAnimationFrame(pjRenderLive);
+}
+
+function pjSetTab(t) {
+  pjTab = t;
+  document.querySelectorAll('#pjTabs button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+  if (t === 'canciones' && pjDeck.tipo !== 'cancion' && serviceList.length) pjLoadSong(nowPlayingIdx >= 0 ? nowPlayingIdx : 0);
+  if (t === 'biblia' && pjDeck.tipo !== 'biblia' && pjDeck.tipo !== 'busqueda') pjDeck = { tipo: 'biblia-vacia', items: [], idx: -1, songIdx: -1 };
+  pjRenderTab();
+}
+
+function pjCardsHTML(items, cls) {
+  return items.length
+    ? items.map((it, i) => `<div class="pj-card ${cls}" data-i="${i}" onclick="pjGo(${i})"><span class="n">${i + 1}</span>${esc(it.texto)}</div>`).join('')
+    : '<div class="pj-empty">Sin diapositivas</div>';
+}
+
+function pjRenderSongList() {
+  const el = document.getElementById('pjSongs');
+  if (!el) return;
+  let html = serviceList.length
+    ? serviceList.map((h, i) => `<div class="pj-song ${i === pjSel ? 'sel' : ''}" onclick="pjPickSong(${i})">${numBadge(h)}${esc(h.title)}${i === nowPlayingIdx ? '<span class="lv">EN VIVO</span>' : ''}</div>`).join('')
+    : '<div class="pj-help">La lista del servicio esta vacia. Arma el servicio en la pestaña Servicio o busca abajo.</div>';
+  if (pjSearchQ.trim()) {
+    const r = searchHymns(hymns, pjSearchQ).slice(0, 25);
+    html += '<div class="pj-h">Resultados</div>' + (r.length ? r.map(h =>
+      `<div class="pj-song" onclick="pjPickHymn('${String(h.id).replace(/'/g, '')}')">${numBadge(h)}${esc(h.title)}</div>`).join('') : '<div class="pj-help">Nada encontrado</div>');
+  }
+  el.innerHTML = html;
+}
+function pjPickSong(i) { pjLoadSong(i); pjRenderTab(); }
+function pjPickHymn(id) { const h = hymns.find(x => String(x.id) === id); if (h) { pjLoadSong(-1, h); pjRenderTab(); } }
+
+function pjRenderTab() {
+  const el = document.getElementById('pjTab');
+  if (!el) return;
+  if (pjTab === 'canciones') {
+    if (pjDeck.tipo !== 'cancion' && serviceList.length) pjLoadSong(nowPlayingIdx >= 0 ? nowPlayingIdx : 0);
+    const items = pjDeck.tipo === 'cancion' ? pjDeck.items : [];
+    el.innerHTML = `<div class="pj-cols">
+      <div><div class="pj-row"><input id="pjSearch" style="flex:1;min-width:0;" placeholder="Buscar numero o titulo..." value="${esc(pjSearchQ)}"
+        oninput="pjSearchQ=this.value;pjRenderSongList()"></div><div class="pj-list" id="pjSongs"></div></div>
+      <div>${pjDeck.tipo === 'cancion' ? `<div class="pj-h" style="margin-top:0;">${esc(pjDeck.titulo || '')}</div>` : ''}
+        <div class="pj-slides" id="pjSlides">${pjDeck.tipo === 'cancion' ? pjCardsHTML(items, '') : '<div class="pj-empty">Elige una cancion</div>'}</div>
+        <div class="pj-help">Toca una estrofa para proyectarla. Con teclado o control de presentaciones: flechas para avanzar, B negro, L logo, C limpiar.</div>
+      </div></div>`;
+    pjRenderSongList();
+  } else if (pjTab === 'biblia') {
+    const books = BIBLIA ? BIBLIA.map((b, i) => `<option value="${i}" ${pjDeck.b === i ? 'selected' : ''}>${esc(b[0])}</option>`).join('') : '';
+    let body = '';
+    if (pjDeck.tipo === 'biblia') {
+      body = `<div class="pj-h">${esc(BIBLIA[pjDeck.b][0])} ${pjDeck.c + 1}</div><div class="pj-slides" id="pjSlides">${pjCardsHTML(pjDeck.items, 'biblia')}</div>`;
+    } else if (pjDeck.tipo === 'busqueda') {
+      body = `<div class="pj-h">"${esc(pjDeck.q)}": ${pjDeck.res.length}${pjDeck.res.length >= 150 ? '+' : ''} versiculos</div><div class="pj-slides">` +
+        pjDeck.res.map(r => `<div class="pj-card biblia" onclick="pjBibPick(${r[0]},${r[1]},${r[2]})"><span class="n">${esc(BIBLIA[r[0]][0])} ${r[1] + 1}:${r[2] + 1}</span>\n${esc(BIBLIA[r[0]][1][r[1]][r[2]])}</div>`).join('') + '</div>';
+    } else {
+      body = '<div class="pj-help">Escribe la cita (ej. <b>Juan 3:16</b>, <b>Sal 23</b>, <b>1 Co 13:4</b>) o una palabra para buscar.</div>';
+    }
+    el.innerHTML = `<div class="pj-row"><input id="pjRef" style="flex:1;min-width:160px;" placeholder="Juan 3:16  o  palabra a buscar"
+        onkeydown="if(event.key==='Enter')pjBibGo()"><button class="btn btn-primary" onclick="pjBibGo()">Proyectar / Buscar</button></div>
+      <div class="pj-row"><select id="pjBook" onchange="pjBibBookChange()" style="flex:1;min-width:140px;">${books}</select>
+        <select id="pjCap" style="width:80px;"></select><button class="btn btn-outline" onclick="pjBibOpenSel()">Abrir capitulo</button></div>
+      ${body}<div class="pj-help">Reina-Valera 1909 (dominio publico).</div>`;
+    if (!BIBLIA) {
+      document.getElementById('pjBook').innerHTML = '<option>Cargando Biblia...</option>';
+      pjLoadBible().then(() => { if (pjTab === 'biblia') pjRenderTab(); }).catch(() => {
+        const s = document.getElementById('pjBook'); if (s) s.innerHTML = '<option>No se pudo cargar (sin internet)</option>'; });
+    } else {
+      pjBibBookChange();
+      if (pjDeck.tipo === 'biblia') document.getElementById('pjCap').value = pjDeck.c;
+    }
+  } else if (pjTab === 'avisos') {
+    const a = pjAvisos(), tk = pjState.ticker || {};
+    el.innerHTML = `<textarea class="pj-area" id="pjAvisoTxt" placeholder="Ej: Bienvenidos a la Iglesia Pentecostal El Bosque"></textarea>
+      <div class="pj-row" style="margin-top:6px;"><button class="btn btn-primary" onclick="pjAvisoShow()">Proyectar aviso</button>
+        <button class="btn btn-outline" onclick="pjAvisoSave()">Guardar</button></div>
+      ${a.length ? '<div class="pj-h">Avisos guardados</div><div class="pj-slides" id="pjSlides">' + a.map((t, i) =>
+        `<div class="pj-card aviso" onclick="pjAvisoShow(pjAvisos()[${i}])"><span class="n" onclick="event.stopPropagation();pjAvisoDel(${i})" title="Borrar">&#10005;</span>${esc(t)}</div>`).join('') + '</div>' : ''}
+      <div class="pj-h">Texto deslizante (abajo de la pantalla)</div>
+      <div class="pj-row"><input id="pjTickTxt" style="flex:1;min-width:180px;" value="${esc(tk.texto || '')}" placeholder="Ej: Culto de oracion el jueves 19:30">
+        <button class="pj-chip ${tk.on ? 'on' : ''}" onclick="pjTicker(true)">${tk.on ? 'Actualizar' : 'Mostrar'}</button>
+        <button class="pj-chip" onclick="pjTicker(false)">Quitar</button></div>`;
+  } else if (pjTab === 'reloj') {
+    const r = pjState.reloj || {};
+    el.innerHTML = `<div class="pj-row"><input id="pjClockTxt" style="flex:1;min-width:180px;" value="${esc(r.texto || 'El culto comienza en')}"></div>
+      <div class="pj-row">${[1, 2, 3, 5, 10, 15, 20, 30].map(m => `<button class="pj-chip" onclick="pjClock(${m})">${m} min</button>`).join('')}</div>
+      <div class="pj-row"><input id="pjClockMin" type="number" min="1" step="1" style="width:90px;" placeholder="min">
+        <button class="btn btn-primary" onclick="pjClock()">Iniciar</button>
+        <button class="btn btn-outline" onclick="pjMode('logo')">Quitar</button></div>
+      <div class="pj-help">La cuenta regresiva aparece en grande en la pantalla del data. Para volver a las canciones toca una estrofa o "Texto".</div>`;
+  } else if (pjTab === 'fondo') {
+    const e = pjState.estilo;
+    el.innerHTML = `<div class="pj-h" style="margin-top:0;">Fondo</div><div class="pj-row">` +
+      Object.keys(PJ_FONDOS).map(k => `<div class="pj-sw ${pjState.fondo === k ? 'on' : ''}" title="${PJ_FONDO_NOMBRES[k]}" style="background:${PJ_FONDOS[k]}" onclick="pjSetFondo('${k}')"></div>`).join('') +
+      `<div class="pj-sw ${pjState.fondo === 'img' ? 'on' : ''}" title="Mi imagen" onclick="pjSetFondo('img')"
+         style="${pjImg ? 'background-image:url(' + pjImg + ')' : 'background:var(--surface-2);display:flex;align-items:center;justify-content:center;font-size:.65rem;color:var(--text-secondary);'}">${pjImg ? '' : 'Imagen'}</div>
+      </div>
+      <div class="pj-row"><button class="pj-chip" onclick="document.getElementById('pjImgIn').click()">${pjImg ? 'Cambiar imagen' : 'Subir imagen de fondo'}</button>
+        <input type="file" id="pjImgIn" accept="image/*" style="display:none" onchange="pjImgFile(this)"></div>
+      <div class="pj-h">Letra</div>
+      <div class="pj-row"><span style="font-size:.85rem;">Tamaño maximo</span>
+        <button class="pj-chip" onclick="pjEstilo('tam',-0.1)">A-</button><b style="min-width:42px;text-align:center;">${Math.round(e.tam * 100)}%</b>
+        <button class="pj-chip" onclick="pjEstilo('tam',0.1)">A+</button></div>
+      <div class="pj-row"><button class="pj-chip ${e.mayus ? 'on' : ''}" onclick="pjEstilo('mayus',${!e.mayus})">MAYUSCULAS</button>
+        <button class="pj-chip ${e.pie ? 'on' : ''}" onclick="pjEstilo('pie',${!e.pie})">Titulo / cita abajo</button></div>
+      <div class="pj-help">La letra siempre se ajusta sola para caber completa; "Tamaño maximo" limita lo grande que puede llegar a ser.</div>`;
+  }
+  pjMarkCards(false);
+  pjRenderLive();
+}
+
+/* Corista: marcar la estrofa que esta en el data */
+function pjCoristaMark(p) {
+  pjLastRemote = p || null;
+  document.querySelectorAll('#flContent .fl-st.cur').forEach(e => e.classList.remove('cur'));
+  if (!p || p.modo !== 'texto' || !p.slide || p.slide.tipo !== 'cancion') return;
+  if (p.slide.songIdx !== nowPlayingIdx || flShownIdx !== nowPlayingIdx) return;
+  if (!document.getElementById('fullscreenLyrics').classList.contains('active')) return;
+  const st = document.querySelectorAll('#flContent .fl-st')[p.slide.st];
+  if (st) st.classList.add('cur');
+}
+
+function pjBoot() {
+  const q = new URLSearchParams(location.search);
+  if (q.has('pantalla')) {
+    let code = (q.get('pantalla') || '').replace(/\D/g, '');
+    if (!code) { try { code = localStorage.getItem('pj_code') || ''; } catch (e) {} }
+    pjStartScreen(code);
+  }
+}
+
 init();
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', pjBoot); else pjBoot();
 </script>
+<div id="pjScreen">
+  <div class="pj-msg" id="pjMsg"></div>
+  <div class="pj-offline">Sin conexion</div>
+  <div class="pj-hint" id="pjHint">Toca la pantalla o presiona F para pantalla completa</div>
+  <div class="pj-codebox" id="pjCodeBox">
+    <h2>Pantalla del proyector</h2>
+    <p>Escribe el codigo de la sala que aparece en el iPad del director (pestaña Proyectar).</p>
+    <input id="pjCodeIn" inputmode="numeric" maxlength="4" placeholder="0000"
+           oninput="this.value=this.value.replace(/\D/g,'')" onkeydown="if(event.key==='Enter')pjCodeGo()">
+    <button onclick="pjCodeGo()">Conectar</button>
+  </div>
+</div>
 <footer style="text-align:center;padding:16px;font-size:0.68rem;color:var(--text-muted);border-top:1px solid var(--border);margin-top:20px;">
   Himnario IPB · Iglesia Pentecostal El Bosque<br>
   Desarrollado por Esteban Melendez
