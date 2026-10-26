@@ -1854,6 +1854,57 @@ body.pj-screen-mode #pjScreen { display: block; position: fixed; inset: 0; z-ind
 /* corista: estrofa que se esta proyectando */
 .fl-st.cur { background: var(--primary-light); box-shadow: 0 0 0 4px var(--primary-light); border-radius: 4px; }
 [data-theme="dark"] .fl-st.cur { background: rgba(42,120,214,.28); box-shadow: 0 0 0 4px rgba(42,120,214,.28); }
+/* ===== v24: logo en todos los fondos, medios, fotos en la cuenta regresiva ===== */
+.pj-show { position: absolute; inset: 0; opacity: 0; transition: opacity .6s; }
+.pj-root.pj-showing .pj-show { opacity: 1; }
+.pj-show > div { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0; transition: opacity 1.2s; }
+.pj-show > div.on { opacity: 1; }
+.pj-show::after { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,.5); }
+.pj-media { position: absolute; inset: 0; opacity: 0; transition: opacity .45s; background: #000; pointer-events: none;
+  display: flex; align-items: center; justify-content: center; }
+.pj-root.pj-mediamode .pj-media { opacity: 1; }
+.pj-media.ended { opacity: 0 !important; }
+.pj-media img, .pj-media video { width: 100%; height: 100%; object-fit: contain; display: block; }
+.pj-media iframe { width: 100%; height: 100%; border: 0; }
+.pj-mlbl { position: absolute; left: 0; right: 0; bottom: 8%; text-align: center; font-size: calc(var(--h) * 0.05); font-weight: 700;
+  text-shadow: 0 2px 6px #000; padding: 0 5%; }
+.pj-root.pj-mediamode .pj-stage, .pj-root.pj-mediamode .pj-foot { opacity: 0; }
+.pj-mark { position: absolute; right: calc(var(--h) * 0.03); bottom: calc(var(--h) * 0.018); height: calc(var(--h) * 0.11); width: auto;
+  opacity: 0; transition: opacity .4s; pointer-events: none; z-index: 4; filter: drop-shadow(0 2px 6px rgba(0,0,0,.6)); }
+.pj-root.has-mark .pj-mark { opacity: .92; }
+.pj-root.has-ticker .pj-mark { bottom: calc(var(--h) * 0.095); height: calc(var(--h) * 0.09); }
+.pj-logoimg.sm { height: calc(var(--h) * 0.2); margin-bottom: calc(var(--h) * 0.025); }
+/* panel Medios del computador del data */
+.pj-medbtn { position: absolute; left: 14px; bottom: 14px; z-index: 6; padding: 9px 16px; border-radius: 20px; background: rgba(0,0,0,.7);
+  color: #fff; border: 1px solid rgba(255,255,255,.35); font-size: 15px; cursor: pointer; transition: opacity .4s; }
+#pjScreen.nocursor .pj-medbtn { opacity: 0; pointer-events: none; }
+.pj-medpanel { position: absolute; top: 6%; bottom: 6%; left: 50%; transform: translateX(-50%); width: min(720px, 92%); z-index: 7;
+  background: rgba(14,18,30,.97); border-radius: 16px; display: none; flex-direction: column; padding: 20px 22px; color: #fff;
+  font-size: 15px; box-shadow: 0 10px 40px rgba(0,0,0,.6); }
+.pj-medpanel.on { display: flex; }
+.pj-medpanel h3 { margin: 0 0 4px; font-size: 22px; }
+.pj-medpanel p { margin: 0 0 12px; opacity: .8; font-size: 14px; line-height: 1.45; }
+.pj-medtop { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+.pj-medtop button, .pj-medrow button { border: none; border-radius: 10px; padding: 10px 16px; font-weight: 700; cursor: pointer; font-size: 14px; }
+.pj-medtop .add { background: #2a78d6; color: #fff; }
+.pj-medtop .close { background: rgba(255,255,255,.15); color: #fff; margin-left: auto; }
+#pjMedList { overflow-y: auto; flex: 1; }
+.pj-medrow { display: flex; align-items: center; gap: 12px; padding: 8px; border-bottom: 1px solid rgba(255,255,255,.1); }
+.pj-medrow img, .pj-medico { width: 96px; height: 54px; object-fit: cover; border-radius: 6px; background: #223; flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center; font-size: 20px; }
+.pj-medn { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pj-medn small { display: block; opacity: .6; font-size: 12px; }
+.pj-medrow button { background: rgba(220,53,69,.85); color: #fff; padding: 7px 12px; }
+#pjMedState { font-size: 13px; color: #9cc3ff; }
+/* tarjetas de video/foto en el iPad */
+.pj-mcard { background-size: cover; background-position: center; min-height: 100px; display: flex; flex-direction: column; justify-content: flex-end; }
+.pj-mtag { position: absolute; top: 5px; left: 7px; font-size: .62rem; background: rgba(0,0,0,.65); padding: 1px 7px; border-radius: 8px; }
+.pj-mname { background: rgba(0,0,0,.6); margin: -9px -10px -8px; padding: 5px 8px; border-radius: 0 0 6px 6px; font-size: .72rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pj-mctl { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; }
+.pj-mctl .pj-mpos { margin-left: auto; font-variant-numeric: tabular-nums; font-size: .82rem; color: var(--text-secondary); }
+.pj-mctl .pj-seek { width: 100%; margin: 4px 0 8px; }
+.pj-mctl .pj-vol { width: 120px; }
 </style>
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#1f6feb">
@@ -2191,7 +2242,7 @@ const LOGO_PDF_URL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAYA
 const STORAGE_KEY = 'himnario_data';
 const SERVICE_KEY = 'himnario_service';
 const HYMNAL_VERSION = 'v20_completo';
-const APP_BUILD = 'v23';
+const APP_BUILD = 'v24';
 
 let hymns = [];
 let serviceList = [];
@@ -2928,7 +2979,7 @@ async function createRoom() {
       memberNames = {};
       Object.keys(m).forEach(k => { memberNames[k] = m[k].nombre || 'Corista'; });
       pjScreens = Object.values(m).filter(x => x && x.pantalla).length;
-      renderMembers(); pjRenderStatus();
+      renderMembers(); pjRenderStatus(); pjMembersUpdate(m);
     });
     pjOnRoomStart();
   } catch (e) {
@@ -2963,7 +3014,7 @@ async function closeRoom() {
   if (!confirm('Cerrar la sala?')) return;
   try {
     if (membersUnsub) { membersUnsub(); membersUnsub = null; }
-    if (fbReady && roomCode) await FB.remove(FB.ref(fbDb, 'salas/' + roomCode));
+    if (fbReady && roomCode) await FB.update(FB.ref(fbDb, 'salas/' + roomCode), { activa: false, nowPlaying: -1 });
   } catch (e) {}
   roomCode = ''; role = null; memberNames = {};
   pjOnRoomEnd();
@@ -3007,8 +3058,8 @@ async function joinRoom() {
   }
 
   try {
-    const snap = await FB.get(FB.ref(fbDb, 'salas/' + code));
-    if (!snap.exists() || !snap.val().activa) {
+    const snap = await FB.get(FB.ref(fbDb, 'salas/' + code + '/activa'));
+    if (!snap.val()) {
       logTo('joinLog', 'La sala ' + code + ' no esta abierta. Pide el codigo al director.', 'error');
       showToast('Sala no encontrada');
       btn.disabled = false; btn.textContent = 'Conectar'; return;
@@ -3027,13 +3078,14 @@ async function joinRoom() {
     FB.onDisconnect(meRef).remove();
   } catch (e) { /* si las reglas lo impiden, igual puede seguir viendo */ }
 
-  roomUnsub = FB.onValue(FB.ref(fbDb, 'salas/' + code), (s) => {
-    if (!s.exists() || !s.val().activa) {
+  // solo lo que necesita el corista (las fotos y fondos del proyector no se descargan)
+  const d = {}; let gotActiva = false;
+  const onRoom = () => {
+    if (!d.activa) {
       showToast('El director cerro la sala');
       leaveRoom();
       return;
     }
-    const d = s.val();
     serviceList = Array.isArray(d.serviceList) ? d.serviceList : Object.values(d.serviceList || {});
     nowPlayingIdx = (d.nowPlaying === undefined || d.nowPlaying === null) ? -1 : d.nowPlaying;
     const sig = JSON.stringify(serviceList) + '|' + nowPlayingIdx;
@@ -3042,9 +3094,14 @@ async function joinRoom() {
     else hideLiveBanner();
     onLiveUpdate();
     pjCoristaMark(d.proyector);
-  }, (err) => {
-    logTo('joinLog', 'Conexion perdida: ' + err.code, 'error');
-  });
+  };
+  const subs = ['activa', 'serviceList', 'nowPlaying', 'proyector'].map(k =>
+    FB.onValue(FB.ref(fbDb, 'salas/' + code + '/' + k), s => {
+      d[k] = s.val();
+      if (k === 'activa') gotActiva = true;
+      if (gotActiva) onRoom();
+    }, err => logTo('joinLog', 'Conexion perdida: ' + err.code, 'error')));
+  roomUnsub = () => subs.forEach(u => { try { u(); } catch (e) {} });
 
   logTo('joinLog', 'Conectado a la sala.', 'ok');
   enterCoristaMode(name);
@@ -3318,13 +3375,13 @@ const PJ_FONDO_NOMBRES = { negro:'Negro', noche:'Noche', azul:'Azul', cielo:'Cie
   morado:'Morado', dorado:'Dorado', gris:'Gris', img:'Mi imagen' };
 
 function pjDefaults() {
-  return { modo: 'logo', slide: null, fondo: 'noche', estilo: { tam: 1, mayus: false, pie: true },
+  return { modo: 'logo', slide: null, fondo: 'noche', estilo: { tam: 1, mayus: false, pie: true, marca: true },
            ticker: { on: false, texto: '' }, reloj: null, v: 0 };
 }
 let pjState = (() => {
   const d = pjDefaults();
   try { const s = JSON.parse(localStorage.getItem('pj_state') || 'null'); if (s) Object.assign(d, s); } catch (e) {}
-  d.estilo = Object.assign({ tam: 1, mayus: false, pie: true }, d.estilo || {});
+  d.estilo = Object.assign({ tam: 1, mayus: false, pie: true, marca: true }, d.estilo || {});
   d.ticker = Object.assign({ on: false, texto: '' }, d.ticker || {});
   return d;
 })();
@@ -3341,10 +3398,12 @@ function pjEnsure(root) {
   root._pj = true;
   root.classList.add('pj-root');
   root.insertAdjacentHTML('afterbegin',
-    '<div class="pj-bg"></div><div class="pj-img"></div>' +
+    '<div class="pj-bg"></div><div class="pj-img"></div><div class="pj-show"><div></div><div></div></div>' +
     '<div class="pj-stage"><div class="pj-layer"></div><div class="pj-layer"></div></div>' +
-    '<div class="pj-foot"></div><div class="pj-ticker"><span></span></div>');
+    '<div class="pj-media"></div><img class="pj-mark" alt=""><div class="pj-foot"></div><div class="pj-ticker"><span></span></div>');
   root._cur = 0;
+  const mk = root.querySelector('.pj-mark'), ls = pjLogoSrc();
+  if (ls) mk.src = ls; else mk.remove();
 }
 
 function pjFitLayer(layer, tam) {
@@ -3374,7 +3433,7 @@ function pjRender(root, st, img) {
   root._st = st;
   const W = root.clientWidth, H = root.clientHeight;
   root.style.setProperty('--h', H + 'px');
-  const est = Object.assign({ tam: 1, mayus: false, pie: true }, st.estilo || {});
+  const est = Object.assign({ tam: 1, mayus: false, pie: true, marca: true }, st.estilo || {});
   const modo = st.modo || 'logo';
 
   // fondo
@@ -3386,10 +3445,19 @@ function pjRender(root, st, img) {
 
   root.classList.toggle('pj-black', modo === 'negro');
   root.classList.toggle('pj-clean', modo === 'limpio');
+  const md = modo === 'media' ? (st.media || null) : null;
+  const isVid = !!md && (md.tipo === 'yt' || md.tipo === 'pcvideo' || md.tipo === 'url');
+  root.classList.toggle('pj-mediamode', !!md);
+  root.classList.toggle('has-mark', est.marca !== false && modo !== 'logo' && modo !== 'negro' && modo !== 'reloj' && !isVid);
+  const showing = modo === 'reloj' && !!(st.reloj && st.reloj.fotos);
+  const wasShowing = root.classList.contains('pj-showing');
+  root.classList.toggle('pj-showing', showing);
+  pjMediaApply(root, md);
+  if (showing && !wasShowing) setTimeout(() => pjShowStep(root, true), 0);
 
   // texto deslizante
   const tk = st.ticker || {};
-  const tkOn = !!(tk.on && tk.texto) && modo !== 'negro';
+  const tkOn = !!(tk.on && tk.texto) && modo !== 'negro' && !isVid;
   root.classList.toggle('has-ticker', tkOn);
   const sp = root.querySelector('.pj-ticker span');
   if (sp.textContent !== (tk.texto || '')) {
@@ -3405,7 +3473,9 @@ function pjRender(root, st, img) {
     html = '<div class="' + cls + '">' + esc(sl.texto) + '</div>';
     key = 't|' + sl.texto + '|' + est.mayus + '|' + est.tam + '|' + sl.tipo;
   } else if (modo === 'reloj' && st.reloj) {
-    html = '<div class="pj-clock-l">' + esc(st.reloj.texto || '') + '</div><div class="pj-clock">--:--</div>';
+    const ls = pjLogoSrc();
+    html = (ls ? '<img class="pj-logoimg sm" src="' + ls + '" alt="">' : '') +
+      '<div class="pj-clock-l">' + esc(st.reloj.texto || '') + '</div><div class="pj-clock">--:--</div>';
     key = 'r|' + st.reloj.hasta + '|' + st.reloj.texto;
   } else if (modo === 'logo' || modo === 'texto') {
     const src = pjLogoSrc();
@@ -3453,8 +3523,8 @@ async function pjStartScreen(code) {
   document.body.classList.add('pj-screen-mode');
   document.title = 'Pantalla · Himnario IPB';
   const root = document.getElementById('pjScreen');
-  let st = null, img = '';
-  const draw = () => pjRender(root, st || { modo: 'logo', fondo: 'noche' }, img);
+  let st = null, img = '', activa = false;
+  const draw = () => pjRender(root, (activa && st) || { modo: 'logo', fondo: (st && st.fondo) || 'noche', estilo: st && st.estilo }, img);
   draw();
   window.addEventListener('resize', () => { root._key = ''; draw(); });
   const msg = t => { document.getElementById('pjMsg').textContent = t || ''; };
@@ -3476,19 +3546,35 @@ async function pjStartScreen(code) {
   const base = 'salas/' + code;
   FB.onValue(FB.ref(fbDb, base + '/proyector'), s => { st = s.val(); draw(); });
   FB.onValue(FB.ref(fbDb, base + '/fondoImg'), s => { img = s.val() || ''; draw(); });
+  FB.onValue(FB.ref(fbDb, base + '/fotos'), s => {
+    root._fotos = s.val() || {};
+    const md = root.querySelector('.pj-media'); if (md && md._key && md._key.startsWith('foto|')) md._key = '';
+    draw();
+  });
+  await pjLibLoad();
+  { const mb = root.querySelector('.pj-media'); if (mb) mb._key = ''; } draw();
 
   const me = FB.ref(fbDb, base + '/miembros/' + fbUser.uid);
-  let activa = false;
   const reg = () => {
-    FB.set(me, { nombre: 'Pantalla (proyector)', pantalla: true, desde: FB.serverTimestamp() }).catch(() => {});
+    FB.set(me, { nombre: 'Pantalla (proyector)', pantalla: true, desde: FB.serverTimestamp(), medios: pjLibList() }).catch(() => {});
     try { FB.onDisconnect(me).remove(); } catch (e) {}
   };
   FB.onValue(FB.ref(fbDb, base + '/activa'), s => {
     activa = !!s.val();
     msg(activa ? '' : 'Esperando al director  ·  Sala ' + code);
     if (activa) reg();
+    draw();
   });
   FB.onValue(me, s => { if (!s.exists() && activa) reg(); });
+  window._pjReg = () => { if (activa) reg(); };
+  // avisar al iPad en que segundo va el video
+  let lastEst = '';
+  setInterval(() => {
+    const e = pjMediaStatus(root), js = JSON.stringify(e);
+    if (js === lastEst || !activa) return;
+    lastEst = js;
+    FB.update(me, { estado: e }).catch(() => {});
+  }, 1000);
   FB.onValue(FB.ref(fbDb, '.info/connected'), s => root.classList.toggle('pj-off', s.val() === false));
 
   // pantalla encendida, cursor oculto, pantalla completa
@@ -3497,11 +3583,17 @@ async function pjStartScreen(code) {
   lock();
   document.addEventListener('visibilitychange', () => { if (!document.hidden) lock(); });
   let ct = null;
-  const wake = () => { root.classList.remove('nocursor'); clearTimeout(ct); ct = setTimeout(() => root.classList.add('nocursor'), 2500); };
+  const wake = () => { root.classList.remove('nocursor'); clearTimeout(ct); ct = setTimeout(() => {
+    if (!document.getElementById('pjMedPanel').classList.contains('on')) root.classList.add('nocursor'); }, 3000); };
   root.addEventListener('mousemove', wake); wake();
   const fs = () => { try { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); } catch (e) {} };
   root.addEventListener('click', fs);
-  window.addEventListener('keydown', e => { if (e.key === 'f' || e.key === 'F') fs(); });
+  window.addEventListener('keydown', e => {
+    if (e.target && e.target.tagName === 'INPUT') return;
+    if (e.key === 'f' || e.key === 'F') fs();
+    if (e.key === 'm' || e.key === 'M') pjMedPanel(!document.getElementById('pjMedPanel').classList.contains('on'));
+  });
+  document.getElementById('pjMedBtn').style.display = '';
   const hint = document.getElementById('pjHint');
   setTimeout(() => { if (hint) hint.style.opacity = 0; }, 6000);
 }
@@ -3516,7 +3608,8 @@ function pjCodeGo() {
 function pjSaveLocal() {
   try {
     const s = Object.assign({}, pjState); delete s.slide;
-    if (s.modo === 'texto' || s.modo === 'reloj') s.modo = 'logo';
+    if (s.modo === 'texto' || s.modo === 'reloj' || s.modo === 'media') s.modo = 'logo';
+    delete s.media;
     localStorage.setItem('pj_state', JSON.stringify(s));
   } catch (e) {}
 }
@@ -3544,7 +3637,7 @@ function pjOnRoomStart() {
     if (first) { first = false; if (!v) { pjPush(); return; } }
     if (v && v.v !== pjState.v) {           // otro control (celular del director) cambio algo
       pjState = Object.assign(pjDefaults(), v);
-      pjState.estilo = Object.assign({ tam: 1, mayus: false, pie: true }, v.estilo || {});
+      pjState.estilo = Object.assign({ tam: 1, mayus: false, pie: true, marca: true }, v.estilo || {});
       pjState.ticker = Object.assign({ on: false, texto: '' }, v.ticker || {});
       pjSaveLocal(); pjRenderLive();
     }
@@ -3553,6 +3646,11 @@ function pjOnRoomStart() {
     const v = s.val() || '';
     if (firstImg) { firstImg = false; if (!v && pjImg) { pjPushImg(); return; } }
     if (v !== pjImg) { pjImg = v; try { localStorage.setItem('pj_img', v); } catch (e) {} pjRenderLive(); if (pjTab === 'fondo') pjRenderTab(); }
+  }));
+  pjUnsubs.push(FB.onValue(FB.ref(fbDb, 'salas/' + roomCode + '/fotos'), s => {
+    pjFotos = s.val() || {};
+    if (pjTab === 'medios') pjRenderFotoList();
+    const pv = document.getElementById('pjPreview'); if (pv) { const mb = pv.querySelector('.pj-media'); if (mb) mb._key = ''; pjRenderLive(); }
   }));
   pjUnsubs.push(FB.onValue(FB.ref(fbDb, 'salas/' + roomCode + '/serviceList'), s => {
     const v = s.val(); if (!v) return;
@@ -3762,7 +3860,7 @@ function pjClock(min) {
   if (min === undefined) min = parseFloat(document.getElementById('pjClockMin').value);
   if (!(min > 0)) { showToast('Indica los minutos'); return; }
   const t = document.getElementById('pjClockTxt').value.trim();
-  pjState.reloj = { hasta: Date.now() + pjOffset + Math.round(min * 60000), texto: t };
+  pjState.reloj = { hasta: Date.now() + pjOffset + Math.round(min * 60000), texto: t, fotos: !!document.getElementById('pjClockFotos').checked };
   pjState.modo = 'reloj';
   pjPush();
 }
@@ -3808,7 +3906,8 @@ window.addEventListener('keydown', e => {
   const tg = (e.target.tagName || '').toLowerCase();
   if (tg === 'input' || tg === 'textarea' || tg === 'select') return;
   const k = e.key;
-  if (k === 'ArrowRight' || k === 'ArrowDown' || k === 'PageDown' || k === ' ') { e.preventDefault(); pjNext(); }
+  if (k === ' ' && pjState.modo === 'media') { e.preventDefault(); pjMediaCmd('toggle'); }
+  else if (k === 'ArrowRight' || k === 'ArrowDown' || k === 'PageDown' || k === ' ') { e.preventDefault(); pjNext(); }
   else if (k === 'ArrowLeft' || k === 'ArrowUp' || k === 'PageUp') { e.preventDefault(); pjPrev(); }
   else if (k === 'b' || k === 'B' || k === '.') pjMode('negro');
   else if (k === 'l' || k === 'L') pjMode('logo');
@@ -3828,6 +3927,9 @@ function pjRenderLive() {
       : (pjDeck.tipo === 'cancion' && serviceList[pjDeck.songIdx + 1] && pjDeck.songIdx >= 0 ? 'Sigue: ' + serviceList[pjDeck.songIdx + 1].title : '');
   }
   pjMarkCards(false);
+  if (pjTab === 'medios') { pjUpdateMediaCtl(); document.querySelectorAll('#pjLibList .pj-mcard, #pjFotoList .pj-mcard').forEach(c => {
+    const oc = c.getAttribute('onclick') || ''; const m = pjState.media;
+    c.classList.toggle('live', pjState.modo === 'media' && !!m && oc.indexOf("'" + m.id + "'") >= 0); }); }
 }
 window.addEventListener('resize', () => { const pv = document.getElementById('pjPreview'); if (pv) { pv._key = ''; pjRenderLive(); } });
 
@@ -3893,7 +3995,7 @@ function pjRenderView() {
     </div>
   </div>
   <div class="pj-tabs" id="pjTabs">
-    ${[['canciones', 'Canciones'], ['biblia', 'Biblia'], ['avisos', 'Avisos'], ['reloj', 'Cuenta regresiva'], ['fondo', 'Fondo y letra']]
+    ${[['canciones', 'Canciones'], ['biblia', 'Biblia'], ['avisos', 'Avisos'], ['medios', 'Videos y fotos'], ['reloj', 'Cuenta regresiva'], ['fondo', 'Fondo y letra']]
       .map(t => `<button data-t="${t[0]}" class="${pjTab === t[0] ? 'on' : ''}" onclick="pjSetTab('${t[0]}')">${t[1]}</button>`).join('')}
   </div>
   <div id="pjTab"></div>`;
@@ -3982,6 +4084,8 @@ function pjRenderTab() {
       <div class="pj-row"><input id="pjTickTxt" style="flex:1;min-width:180px;" value="${esc(tk.texto || '')}" placeholder="Ej: Culto de oracion el jueves 19:30">
         <button class="pj-chip ${tk.on ? 'on' : ''}" onclick="pjTicker(true)">${tk.on ? 'Actualizar' : 'Mostrar'}</button>
         <button class="pj-chip" onclick="pjTicker(false)">Quitar</button></div>`;
+  } else if (pjTab === 'medios') {
+    pjRenderMediaTab(el);
   } else if (pjTab === 'reloj') {
     const r = pjState.reloj || {};
     el.innerHTML = `<div class="pj-row"><input id="pjClockTxt" style="flex:1;min-width:180px;" value="${esc(r.texto || 'El culto comienza en')}"></div>
@@ -3989,6 +4093,10 @@ function pjRenderTab() {
       <div class="pj-row"><input id="pjClockMin" type="number" min="1" step="1" style="width:90px;" placeholder="min">
         <button class="btn btn-primary" onclick="pjClock()">Iniciar</button>
         <button class="btn btn-outline" onclick="pjMode('logo')">Quitar</button></div>
+      <label class="pj-row" style="font-size:.88rem;cursor:pointer;"><input type="checkbox" id="pjClockFotos" ${r.fotos !== false ? 'checked' : ''}
+        onchange="if(pjState.reloj){pjState.reloj.fotos=this.checked;if(pjState.modo==='reloj')pjPush();}">
+        Mostrar fotos de fondo (cambian cada 7 segundos)</label>
+      <div class="pj-help">Las fotos salen de "Videos y fotos": las subidas desde este aparato y las guardadas en el computador del data. El logo de la iglesia aparece arriba del reloj.</div>
       <div class="pj-help">La cuenta regresiva aparece en grande en la pantalla del data. Para volver a las canciones toca una estrofa o "Texto".</div>`;
   } else if (pjTab === 'fondo') {
     const e = pjState.estilo;
@@ -4004,7 +4112,8 @@ function pjRenderTab() {
         <button class="pj-chip" onclick="pjEstilo('tam',-0.1)">A-</button><b style="min-width:42px;text-align:center;">${Math.round(e.tam * 100)}%</b>
         <button class="pj-chip" onclick="pjEstilo('tam',0.1)">A+</button></div>
       <div class="pj-row"><button class="pj-chip ${e.mayus ? 'on' : ''}" onclick="pjEstilo('mayus',${!e.mayus})">MAYUSCULAS</button>
-        <button class="pj-chip ${e.pie ? 'on' : ''}" onclick="pjEstilo('pie',${!e.pie})">Titulo / cita abajo</button></div>
+        <button class="pj-chip ${e.pie ? 'on' : ''}" onclick="pjEstilo('pie',${!e.pie})">Titulo / cita abajo</button>
+        <button class="pj-chip ${e.marca !== false ? 'on' : ''}" onclick="pjEstilo('marca',${e.marca === false})">Logo en la esquina</button></div>
       <div class="pj-help">La letra siempre se ajusta sola para caber completa; "Tamaño maximo" limita lo grande que puede llegar a ser.</div>`;
   }
   pjMarkCards(false);
@@ -4031,6 +4140,413 @@ function pjBoot() {
   }
 }
 
+// ═══════════════════════════════════════
+// MEDIOS: YouTube, videos/fotos del PC del data y fotos del iPad
+// ═══════════════════════════════════════
+let pjFotos = {};      // fotos subidas desde el iPad: salas/{codigo}/fotos/{id} = {d, n}
+let pjMembers = {};    // miembros de la sala: aqui la pantalla publica su biblioteca y el estado del video
+let pjLib = [];        // (solo en la pantalla) archivos guardados en este computador
+const pjLibUrls = {};
+
+function pjYtId(u) {
+  u = (u || '').trim();
+  if (/^[\w-]{11}$/.test(u)) return u;
+  const m = /(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/|v\/))([\w-]{11})/.exec(u);
+  return m ? m[1] : '';
+}
+function pjYtStart(u) {
+  const m = /[?&](?:t|start)=(?:(\d+)h)?(?:(\d+)m)?(\d+)?s?/.exec(u || '');
+  return m ? (+(m[1] || 0)) * 3600 + (+(m[2] || 0)) * 60 + (+(m[3] || 0)) : 0;
+}
+function pjFmtSec(s) { s = Math.max(0, Math.floor(s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+
+// ─── Que se ve en la capa de medios ───
+function pjFotoSrc(root, id) {
+  const map = root && root.id === 'pjScreen' ? (root._fotos || {}) : pjFotos;
+  return map[id] ? map[id].d : '';
+}
+function pjLibUrl(id) {
+  if (pjLibUrls[id]) return pjLibUrls[id];
+  const r = pjLib.find(x => x.id === id);
+  if (!r) return '';
+  return (pjLibUrls[id] = URL.createObjectURL(r.blob));
+}
+function pjLibInfo(id) {
+  for (const k in pjMembers) {
+    const m = pjMembers[k];
+    if (m && m.pantalla && m.medios) { const it = (Array.isArray(m.medios) ? m.medios : Object.values(m.medios)).find(x => x.id === id); if (it) return it; }
+  }
+  return null;
+}
+
+function pjMediaHTML(root, md, isScreen) {
+  const lbl = t => '<div class="pj-mlbl">' + t + '</div>';
+  if (md.tipo === 'yt') {
+    if (!isScreen) return '<img src="https://i.ytimg.com/vi/' + md.id + '/hqdefault.jpg" alt="">' + lbl('YouTube');
+    return '<iframe allow="autoplay; encrypted-media; fullscreen" allowfullscreen src="https://www.youtube-nocookie.com/embed/' + md.id +
+      '?autoplay=1&controls=0&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3&fs=0&disablekb=1&enablejsapi=1' +
+      (md.start ? '&start=' + md.start : '') + (md.mute ? '&mute=1' : '') + '&origin=' + encodeURIComponent(location.origin) + '"></iframe>';
+  }
+  if (md.tipo === 'foto') { const s = pjFotoSrc(root, md.id); return s ? '<img src="' + s + '" alt="">' : lbl('Foto no encontrada'); }
+  if (md.tipo === 'pcfoto' || md.tipo === 'pcvideo') {
+    if (!isScreen) {
+      const inf = pjLibInfo(md.id);
+      return (inf && inf.th ? '<img src="' + inf.th + '" alt="">' : '') + lbl((md.tipo === 'pcvideo' ? 'Video: ' : 'Foto: ') + esc(md.nombre || ''));
+    }
+    const u = pjLibUrl(md.id);
+    if (!u) return lbl('No esta en este computador: ' + esc(md.nombre || ''));
+    return md.tipo === 'pcfoto' ? '<img src="' + u + '" alt="">' : '<video src="' + u + '" playsinline preload="auto"></video>';
+  }
+  if (md.tipo === 'url') {
+    if (!isScreen) return lbl('Video: ' + esc(md.nombre || md.src));
+    return '<video src="' + esc(md.src) + '" playsinline preload="auto"></video>';
+  }
+  return '';
+}
+
+function pjYtCmd(f, func, args) {
+  try { f.contentWindow.postMessage(JSON.stringify({ event: 'command', func: func, args: args || [] }), '*'); } catch (e) {}
+}
+
+function pjMediaApply(root, md) {
+  const box = root.querySelector('.pj-media');
+  const isScreen = root.id === 'pjScreen';
+  const key = md ? md.tipo + '|' + (md.id || md.src || '') + '|' + (isScreen ? '' : (pjLibInfo(md.id) || {}).th ? 'th' : '') : '';
+  if (box._key !== key) {
+    box._key = key;
+    box.classList.remove('ended');
+    box.innerHTML = md ? pjMediaHTML(root, md, isScreen) : '';
+    box._seekN = md && md.seek ? md.seek.n : 0;
+    box._ytSent = '';
+    box._info = {};
+    const v = box.querySelector('video');
+    if (v && isScreen) {
+      v.addEventListener('ended', () => { if (!v.loop) box.classList.add('ended'); });
+      v.addEventListener('play', () => box.classList.remove('ended'));
+      v.addEventListener('error', () => { box.innerHTML = '<div class="pj-mlbl">No se pudo reproducir este video</div>'; });
+    }
+    const f = box.querySelector('iframe');
+    if (f && isScreen) f.addEventListener('load', () => {
+      try { f.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: 1 }), '*'); } catch (e) {}
+      box._ytSent = ''; setTimeout(() => pjMediaApply(root, root._st && root._st.media), 600);
+    });
+  }
+  if (!md || !isScreen) return;
+  const vol = md.vol === undefined || md.vol === null ? 80 : md.vol;
+  const v = box.querySelector('video');
+  if (v) {
+    v.loop = !!md.loop; v.muted = !!md.mute; v.volume = Math.max(0, Math.min(1, vol / 100));
+    if (md.seek && md.seek.n !== box._seekN) { box._seekN = md.seek.n; try { v.currentTime = md.seek.t || 0; } catch (e) {} box.classList.remove('ended'); }
+    if (md.play && v.paused && !v.ended) v.play().catch(() => { v.muted = true; v.play().catch(() => {}); });
+    else if (!md.play && !v.paused) v.pause();
+  }
+  const f = box.querySelector('iframe');
+  if (f) {
+    const sig = JSON.stringify([md.play, md.mute, vol, md.seek && md.seek.n]);
+    if (box._ytSent !== sig) {
+      const prev = box._ytSent ? JSON.parse(box._ytSent) : null;
+      box._ytSent = sig;
+      if (!prev || prev[3] !== (md.seek && md.seek.n)) { if (prev && md.seek) pjYtCmd(f, 'seekTo', [md.seek.t || 0, true]); }
+      pjYtCmd(f, 'setVolume', [vol]);
+      pjYtCmd(f, md.mute ? 'mute' : 'unMute');
+      pjYtCmd(f, md.play ? 'playVideo' : 'pauseVideo');
+    }
+  }
+}
+
+// estado de YouTube (tiempo, duracion, fin) que manda el reproductor
+window.addEventListener('message', e => {
+  if (!/youtube(-nocookie)?\.com$/.test((e.origin || '').replace(/^https?:\/\//, '').replace(/^www\./, ''))) return;
+  let d; try { d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; } catch (er) { return; }
+  const root = document.getElementById('pjScreen');
+  const box = root && root.querySelector('.pj-media');
+  if (!box || !d || !d.info) return;
+  Object.assign(box._info || (box._info = {}), d.info);
+  const md = root._st && root._st.media;
+  if (d.info.playerState === 0 && md && md.loop) { const f = box.querySelector('iframe'); if (f) { pjYtCmd(f, 'seekTo', [0, true]); pjYtCmd(f, 'playVideo'); } }
+});
+
+function pjMediaStatus(root) {
+  const box = root && root.querySelector('.pj-media');
+  if (!box || !root.classList.contains('pj-mediamode')) return null;
+  const v = box.querySelector('video');
+  if (v) return { t: Math.floor(v.currentTime || 0), d: Math.floor(v.duration || 0), p: !v.paused && !v.ended };
+  if (box.querySelector('iframe') && box._info) {
+    const i = box._info;
+    return { t: Math.floor(i.currentTime || 0), d: Math.floor(i.duration || 0), p: i.playerState === 1 };
+  }
+  return null;
+}
+
+// ─── Diapositivas de fotos en la cuenta regresiva ───
+function pjShowStep(root, force) {
+  if (!root || !root._pj) return;
+  const on = root.classList.contains('pj-showing');
+  if (!on) { root._showT = 0; return; }
+  const now = Date.now();
+  if (!force && root._showT && now - root._showT < 7000) return;
+  const isScreen = root.id === 'pjScreen';
+  const fotos = Object.values(isScreen ? (root._fotos || {}) : pjFotos).map(x => x.d);
+  if (isScreen) pjLib.filter(x => x.tipo === 'pcfoto').forEach(x => fotos.push(pjLibUrl(x.id)));
+  if (!fotos.length) return;
+  root._showT = now;
+  root._showI = ((root._showI === undefined ? -1 : root._showI) + 1) % fotos.length;
+  const ds = root.querySelectorAll('.pj-show > div');
+  const nx = ds[root._showA ? 0 : 1], pv = ds[root._showA ? 1 : 0];
+  nx.style.backgroundImage = 'url("' + fotos[root._showI] + '")';
+  nx.classList.add('on'); pv.classList.remove('on');
+  root._showA = !root._showA;
+}
+setInterval(() => { pjShowStep(document.getElementById('pjScreen')); pjShowStep(document.getElementById('pjPreview')); }, 1000);
+
+// ─── Biblioteca del computador del data (IndexedDB) ───
+function pjIdb() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open('himnarioMedios', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('files', { keyPath: 'id' });
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  });
+}
+async function pjLibLoad() {
+  try {
+    const db = await pjIdb();
+    pjLib = await new Promise((res, rej) => {
+      const out = [], c = db.transaction('files').objectStore('files').openCursor();
+      c.onsuccess = e => { const cur = e.target.result; if (cur) { out.push(cur.value); cur.continue(); } else res(out); };
+      c.onerror = () => rej(c.error);
+    });
+    pjLib.sort((a, b) => (a.ts || 0) - (b.ts || 0));
+  } catch (e) { pjLib = []; }
+  return pjLib;
+}
+async function pjLibPut(rec) {
+  const db = await pjIdb();
+  await new Promise((res, rej) => { const tx = db.transaction('files', 'readwrite'); tx.objectStore('files').put(rec); tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+}
+async function pjLibDelete(id) {
+  const db = await pjIdb();
+  await new Promise((res, rej) => { const tx = db.transaction('files', 'readwrite'); tx.objectStore('files').delete(id); tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+  if (pjLibUrls[id]) { URL.revokeObjectURL(pjLibUrls[id]); delete pjLibUrls[id]; }
+}
+function pjLibList() { return pjLib.map(x => ({ id: x.id, n: x.nombre, t: x.tipo, s: x.size || 0, th: x.th || '' })); }
+
+function pjThumb(file, isVideo) {
+  return new Promise(res => {
+    const done = el => {
+      try {
+        const w = el.videoWidth || el.naturalWidth, h = el.videoHeight || el.naturalHeight;
+        const sc = Math.min(1, 240 / w, 135 / h), cv = document.createElement('canvas');
+        cv.width = Math.max(1, Math.round(w * sc)); cv.height = Math.max(1, Math.round(h * sc));
+        cv.getContext('2d').drawImage(el, 0, 0, cv.width, cv.height);
+        res(cv.toDataURL('image/jpeg', 0.6));
+      } catch (e) { res(''); }
+      URL.revokeObjectURL(u);
+    };
+    const u = URL.createObjectURL(file);
+    setTimeout(() => res(''), 8000);
+    if (isVideo) {
+      const v = document.createElement('video'); v.muted = true; v.preload = 'auto'; v.src = u;
+      v.addEventListener('loadeddata', () => { try { v.currentTime = Math.min(2, (v.duration || 4) / 3); } catch (e) { done(v); } });
+      v.addEventListener('seeked', () => done(v)); v.addEventListener('error', () => res(''));
+    } else { const i = new Image(); i.onload = () => done(i); i.onerror = () => res(''); i.src = u; }
+  });
+}
+
+// Panel "Medios" en la pantalla del data
+function pjMedPanel(open) {
+  const p = document.getElementById('pjMedPanel');
+  if (!p) return;
+  p.classList.toggle('on', open);
+  if (open) pjMedPanelRender();
+}
+function pjMedPanelRender() {
+  const l = document.getElementById('pjMedList');
+  if (!l) return;
+  const mb = s => s > 1e9 ? (s / 1e9).toFixed(1) + ' GB' : s > 1e6 ? Math.round(s / 1e6) + ' MB' : Math.round(s / 1e3) + ' KB';
+  l.innerHTML = pjLib.length ? pjLib.map(x => `<div class="pj-medrow">${x.th ? '<img src="' + x.th + '" alt="">' : '<span class="pj-medico">' + (x.tipo === 'pcvideo' ? '&#9654;' : '&#9635;') + '</span>'}
+      <span class="pj-medn">${esc(x.nombre)}<small>${x.tipo === 'pcvideo' ? 'Video' : 'Foto'} · ${mb(x.size || 0)}</small></span>
+      <button onclick="event.stopPropagation();pjMedDel('${x.id}')">Quitar</button></div>`).join('')
+    : '<p style="opacity:.75;">Todavia no hay videos ni fotos guardados en este computador.</p>';
+}
+async function pjMedAdd(inp) {
+  const files = [...(inp.files || [])];
+  inp.value = '';
+  if (!files.length) return;
+  try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) {}
+  const st = document.getElementById('pjMedState');
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i], isV = /^video\//.test(f.type);
+    if (!isV && !/^image\//.test(f.type)) continue;
+    if (st) st.textContent = 'Guardando ' + (i + 1) + ' de ' + files.length + ': ' + f.name + '...';
+    const th = await pjThumb(f, isV);
+    const rec = { id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), nombre: f.name.replace(/\.[^.]+$/, ''),
+      tipo: isV ? 'pcvideo' : 'pcfoto', size: f.size, blob: f, th: th, ts: Date.now() };
+    try { await pjLibPut(rec); pjLib.push(rec); }
+    catch (e) { if (st) st.textContent = 'No hay espacio para ' + f.name; }
+  }
+  if (st) st.textContent = '';
+  pjMedPanelRender();
+  if (window._pjReg) window._pjReg();
+}
+async function pjMedDel(id) {
+  await pjLibDelete(id);
+  pjLib = pjLib.filter(x => x.id !== id);
+  pjMedPanelRender();
+  if (window._pjReg) window._pjReg();
+}
+
+// ─── Control desde el iPad ───
+function pjMediaShow(media) {
+  const prev = pjState.media || {};
+  pjState.media = Object.assign({ play: true, vol: prev.vol === undefined ? 80 : prev.vol, mute: false, loop: false, seek: { t: 0, n: 0 } }, media);
+  pjState.modo = 'media';
+  pjPush();
+  pjUpdateMediaCtl();
+}
+function pjMediaCmd(c, v) {
+  const m = pjState.media;
+  if (!m) return;
+  const sn = () => ((m.seek && m.seek.n) || 0) + 1;
+  if (c === 'toggle') m.play = !m.play;
+  else if (c === 'restart') { m.seek = { t: 0, n: sn() }; m.play = true; }
+  else if (c === 'mute') m.mute = !m.mute;
+  else if (c === 'loop') m.loop = !m.loop;
+  else if (c === 'vol') { m.vol = +v; m.mute = false; }
+  else if (c === 'seek') { m.seek = { t: +v, n: sn() }; }
+  else if (c === 'back') { m.seek = { t: Math.max(0, (pjMediaState().t || 0) - 10), n: sn() }; }
+  else if (c === 'fwd') { m.seek = { t: (pjMediaState().t || 0) + 10, n: sn() }; }
+  else if (c === 'stop') { pjState.modo = pjState.slide ? 'limpio' : 'logo'; m.play = false; }
+  pjPush();
+  pjUpdateMediaCtl();
+}
+function pjMediaState() {
+  for (const k in pjMembers) { const m = pjMembers[k]; if (m && m.pantalla && m.estado) return m.estado; }
+  return {};
+}
+function pjMediaGo() {
+  const u = (document.getElementById('pjYt').value || '').trim();
+  if (!u) { showToast('Pega un link'); return; }
+  const id = pjYtId(u);
+  if (id) return pjMediaShow({ tipo: 'yt', id: id, start: pjYtStart(u), nombre: 'YouTube' });
+  if (/^https?:\/\/.+\.(mp4|webm|m4v|mov)(\?|#|$)/i.test(u)) return pjMediaShow({ tipo: 'url', src: u, nombre: u.split('/').pop().split('?')[0] });
+  showToast('Link no reconocido: usa YouTube o un enlace directo .mp4');
+}
+function pjPcShow(id) {
+  const it = pjLibInfo(id);
+  if (!it) return;
+  pjMediaShow({ tipo: it.t, id: id, nombre: it.n });
+}
+
+function pjFotoUpload(inp) {
+  const files = [...(inp.files || [])];
+  inp.value = '';
+  if (!files.length || !roomCode) return;
+  let n = 0;
+  files.forEach(file => {
+    const rd = new FileReader();
+    rd.onload = () => {
+      const im = new Image();
+      im.onload = () => {
+        const sc = Math.min(1, 1920 / im.width, 1080 / im.height);
+        const cv = document.createElement('canvas');
+        cv.width = Math.round(im.width * sc); cv.height = Math.round(im.height * sc);
+        cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height);
+        let q = 0.8, d = cv.toDataURL('image/jpeg', q);
+        while (d.length > 480000 && q > 0.35) { q -= 0.1; d = cv.toDataURL('image/jpeg', q); }
+        const id = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        FB.set(FB.ref(fbDb, 'salas/' + roomCode + '/fotos/' + id), { d: d, n: file.name.replace(/\.[^.]+$/, ''), ts: Date.now() })
+          .then(() => { if (++n === files.length) showToast(n + (n === 1 ? ' foto lista' : ' fotos listas')); })
+          .catch(e => showToast('No se pudo subir: ' + (e.code || e.message)));
+      };
+      im.src = rd.result;
+    };
+    rd.readAsDataURL(file);
+  });
+  showToast('Subiendo ' + files.length + (files.length === 1 ? ' foto...' : ' fotos...'));
+}
+function pjFotoDel(id) {
+  if (!confirm('Borrar esta foto?')) return;
+  FB.remove(FB.ref(fbDb, 'salas/' + roomCode + '/fotos/' + id)).catch(() => {});
+}
+
+function pjMembersUpdate(m) {
+  pjMembers = m || {};
+  if (pjTab === 'medios') pjRenderLibList();
+  pjUpdateMediaCtl();
+  const pv = document.getElementById('pjPreview');
+  if (pv && pjState.modo === 'media') pjRenderLive();
+}
+
+function pjRenderLibList() {
+  const el = document.getElementById('pjLibList');
+  if (!el) return;
+  let items = [], screens = 0;
+  for (const k in pjMembers) { const m = pjMembers[k]; if (m && m.pantalla) { screens++; if (m.medios) items = items.concat(Array.isArray(m.medios) ? m.medios : Object.values(m.medios)); } }
+  const cur = pjState.modo === 'media' && pjState.media ? pjState.media.id : '';
+  el.innerHTML = items.length ? items.map(x => `<div class="pj-card pj-mcard ${x.id === cur ? 'live' : ''}" onclick="pjPcShow('${x.id}')"
+      style="${x.th ? 'background-image:url(' + x.th + ')' : ''}"><span class="pj-mtag">${x.t === 'pcvideo' ? '&#9654; Video' : 'Foto'}</span><span class="pj-mname">${esc(x.n)}</span></div>`).join('')
+    : '<div class="pj-empty">' + (screens ? 'El computador del data todavia no tiene videos ni fotos guardados.' : 'Conecta la pantalla del data para ver sus videos y fotos.') + '</div>';
+}
+function pjRenderFotoList() {
+  const el = document.getElementById('pjFotoList');
+  if (!el) return;
+  const ids = Object.keys(pjFotos).sort((a, b) => (pjFotos[a].ts || 0) - (pjFotos[b].ts || 0));
+  const cur = pjState.modo === 'media' && pjState.media && pjState.media.tipo === 'foto' ? pjState.media.id : '';
+  el.innerHTML = ids.length ? ids.map(id => `<div class="pj-card pj-mcard ${id === cur ? 'live' : ''}" onclick="pjMediaShow({tipo:'foto',id:'${id}',nombre:'Foto'})"
+      style="background-image:url(${pjFotos[id].d})"><span class="n" onclick="event.stopPropagation();pjFotoDel('${id}')" title="Borrar">&#10005;</span></div>`).join('')
+    : '<div class="pj-empty">Sin fotos todavia</div>';
+}
+
+function pjUpdateMediaCtl() {
+  const el = document.getElementById('pjMediaCtl');
+  if (!el) return;
+  const m = pjState.media, on = pjState.modo === 'media' && m;
+  el.style.display = on ? '' : 'none';
+  if (!on) return;
+  const isVid = m.tipo === 'yt' || m.tipo === 'url' || m.tipo === 'pcvideo';
+  const s = pjMediaState();
+  el.querySelector('.pj-mtitle').textContent = (isVid ? 'Video: ' : 'Foto: ') + (m.nombre || '');
+  el.querySelectorAll('.vid').forEach(b => b.style.display = isVid ? '' : 'none');
+  el.querySelector('[data-c="toggle"]').innerHTML = m.play ? '&#10074;&#10074; Pausa' : '&#9654; Reproducir';
+  el.querySelector('[data-c="mute"]').textContent = m.mute ? 'Activar sonido' : 'Silenciar';
+  el.querySelector('[data-c="loop"]').classList.toggle('on', !!m.loop);
+  const vr = el.querySelector('.pj-vol'); if (document.activeElement !== vr) vr.value = m.vol === undefined ? 80 : m.vol;
+  const sk = el.querySelector('.pj-seek');
+  if (document.activeElement !== sk) { sk.max = s.d || 0; sk.value = s.t || 0; }
+  el.querySelector('.pj-mpos').textContent = s.d ? pjFmtSec(s.t) + ' / ' + pjFmtSec(s.d) + (s.p ? '' : '  (detenido)') : '';
+}
+function pjMediaCtlHTML() {
+  return `<div class="pj-mctl" id="pjMediaCtl" style="display:none;">
+    <div class="pj-row" style="margin-bottom:6px;"><b class="pj-mtitle"></b><span class="pj-mpos"></span></div>
+    <input type="range" class="pj-seek vid" min="0" max="0" value="0" onchange="pjMediaCmd('seek',this.value)">
+    <div class="pj-row">
+      <button class="pj-chip vid" data-c="toggle" onclick="pjMediaCmd('toggle')"></button>
+      <button class="pj-chip vid" onclick="pjMediaCmd('back')">-10 s</button>
+      <button class="pj-chip vid" onclick="pjMediaCmd('fwd')">+10 s</button>
+      <button class="pj-chip vid" onclick="pjMediaCmd('restart')">Desde el inicio</button>
+      <button class="pj-chip vid" data-c="loop" onclick="pjMediaCmd('loop')">Repetir</button>
+      <button class="pj-chip vid" data-c="mute" onclick="pjMediaCmd('mute')"></button>
+      <span class="vid" style="font-size:.8rem;">Volumen</span><input type="range" class="pj-vol vid" min="0" max="100" onchange="pjMediaCmd('vol',this.value)">
+      <button class="pj-chip" style="background:#dc3545;color:#fff;border-color:#dc3545;" onclick="pjMediaCmd('stop')">Quitar</button>
+    </div></div>`;
+}
+function pjRenderMediaTab(el) {
+  el.innerHTML = pjMediaCtlHTML() + `
+    <div class="pj-h">YouTube o enlace de video</div>
+    <div class="pj-row"><input id="pjYt" style="flex:1;min-width:200px;" placeholder="Pega el link de YouTube (o un enlace .mp4)"
+      onkeydown="if(event.key==='Enter')pjMediaGo()"><button class="btn btn-primary" onclick="pjMediaGo()">Proyectar video</button></div>
+    <div class="pj-h">Videos y fotos guardados en el computador del data</div>
+    <div class="pj-slides" id="pjLibList"></div>
+    <div class="pj-help">Para agregar: en el computador del data mueve el mouse y toca el boton <b>Medios</b> (abajo a la izquierda), luego "Agregar videos o fotos". Quedan guardados en ese computador y aparecen aqui.</div>
+    <div class="pj-h">Fotos desde este aparato</div>
+    <div class="pj-row"><button class="pj-chip" onclick="document.getElementById('pjFotoIn').click()">Subir fotos</button>
+      <input type="file" id="pjFotoIn" accept="image/*" multiple style="display:none" onchange="pjFotoUpload(this)"></div>
+    <div class="pj-slides" id="pjFotoList"></div>
+    <div class="pj-help">Las fotos tambien se usan en la cuenta regresiva. Los videos guardados en el iPad son muy pesados para enviarlos por internet:
+      copialos al computador del data (pendrive o Drive) y agregalos en <b>Medios</b>, o subelos a YouTube como "no listado".</div>`;
+  pjRenderLibList(); pjRenderFotoList(); pjUpdateMediaCtl();
+}
+
 init();
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', pjBoot); else pjBoot();
 </script>
@@ -4038,6 +4554,18 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
   <div class="pj-msg" id="pjMsg"></div>
   <div class="pj-offline">Sin conexion</div>
   <div class="pj-hint" id="pjHint">Toca la pantalla o presiona F para pantalla completa</div>
+  <button class="pj-medbtn" id="pjMedBtn" style="display:none;" onclick="event.stopPropagation();pjMedPanel(true)">Medios</button>
+  <div class="pj-medpanel" id="pjMedPanel" onclick="event.stopPropagation()">
+    <h3>Videos y fotos de este computador</h3>
+    <p>Lo que agregues aqui queda guardado en este computador y aparece en el iPad (Proyectar &rsaquo; Videos y fotos) para mostrarlo con un toque.</p>
+    <div class="pj-medtop">
+      <button class="add" onclick="document.getElementById('pjMedIn').click()">Agregar videos o fotos</button>
+      <input type="file" id="pjMedIn" accept="video/*,image/*" multiple style="display:none" onchange="pjMedAdd(this)">
+      <span id="pjMedState"></span>
+      <button class="close" onclick="pjMedPanel(false)">Cerrar</button>
+    </div>
+    <div id="pjMedList"></div>
+  </div>
   <div class="pj-codebox" id="pjCodeBox">
     <h2>Pantalla del proyector</h2>
     <p>Escribe el codigo de la sala que aparece en el iPad del director (pestaña Proyectar).</p>
