@@ -2012,11 +2012,11 @@ body.pj-screen-mode #pjScreen { display: block; position: fixed; inset: 0; z-ind
         <button class="btn btn-outline btn-block" id="btnDirLogin"
                 onclick="document.getElementById('dirLoginModal').classList.add('active')"
                 style="font-size:0.8rem;padding:8px;">
-          Entrar como director
+          Entrar (director u operador)
         </button>
         <button class="btn btn-outline btn-block" id="btnDirLogout" onclick="fbLogoutDirector()"
                 style="display:none;font-size:0.8rem;padding:8px;">
-          Salir del modo director
+          Cerrar sesion
         </button>
         <button class="btn btn-outline btn-block" onclick="openFbConfig()"
                 style="font-size:0.8rem;padding:8px;">
@@ -2093,6 +2093,8 @@ body.pj-screen-mode #pjScreen { display: block; position: fixed; inset: 0; z-ind
     </div>
     <div class="log-panel" id="hostLog" style="margin-top:8px;"></div>
   </div>
+
+  <div id="opsPanel" style="margin-top:12px;"></div>
 
   <!-- Corista connected -->
   <div id="salaConnected" style="display:none;"></div>
@@ -2242,7 +2244,7 @@ const LOGO_PDF_URL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAYA
 const STORAGE_KEY = 'himnario_data';
 const SERVICE_KEY = 'himnario_service';
 const HYMNAL_VERSION = 'v20_completo';
-const APP_BUILD = 'v24';
+const APP_BUILD = 'v25';
 
 let hymns = [];
 let serviceList = [];
@@ -2606,6 +2608,69 @@ async function exportPDF(){if(!serviceList.length){showToast('Agrega canciones p
 
 let fbApp = null, fbDb = null, fbAuth = null, fbUser = null;
 let fbReady = false, fbIsDirector = false;
+/* Roles: el DIRECTOR (dueño) publica la biblioteca y autoriza operadores.
+   Un OPERADOR (ej. Felipe en el PC del data) abre la sala y maneja el proyector
+   con su propia cuenta, sin conocer la contraseña del director. */
+const DIRECTOR_UID = 'GNdP1gl5zKaOo8ut5EIqMoJVI3J3';
+let fbRole = '', fbIsOwner = false, opUnsub = null, opList = {};
+function fbSetRole(u) {
+  if (!u || u.isAnonymous) { fbRole = ''; fbIsDirector = false; fbIsOwner = false; return; }
+  if (u.uid === DIRECTOR_UID) { fbRole = 'director'; fbIsDirector = true; fbIsOwner = true; fbWatchOps(); return; }
+  fbRole = 'revisando'; fbIsDirector = false; fbIsOwner = false;
+  FB.get(FB.ref(fbDb, 'operadores/' + u.uid)).then(s => {
+    if (!fbUser || fbUser.uid !== u.uid) return;
+    fbRole = s.exists() ? 'operador' : 'pendiente';
+    fbIsDirector = fbRole === 'operador';
+    updateDirectorUI();
+  }).catch(() => { fbRole = 'pendiente'; updateDirectorUI(); });
+}
+function fbWatchOps() {
+  if (opUnsub || !fbDb) return;
+  opUnsub = FB.onValue(FB.ref(fbDb, 'operadores'), s => { opList = s.val() || {}; renderOps(); }, () => {});
+}
+function renderOps() {
+  const el = document.getElementById('opsPanel');
+  if (!el) return;
+  if (fbRole === 'pendiente' && fbUser) {
+    el.innerHTML = `<div class="room-panel" style="text-align:left;">
+      <h3 style="font-size:0.95rem;margin-bottom:6px;">Cuenta sin autorizar</h3>
+      <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:8px;">Entraste como <b>${esc(fbUser.email || '')}</b>, pero el director
+        todavia no te agrego como operador. Enviale este codigo:</p>
+      <div style="font-family:monospace;font-size:0.82rem;background:var(--surface-2);padding:8px;border-radius:8px;word-break:break-all;">${esc(fbUser.uid)}</div>
+      <button class="btn btn-outline btn-sm" style="margin-top:8px;" onclick="navigator.clipboard.writeText('${fbUser.uid}').then(()=>showToast('Codigo copiado'))">Copiar codigo</button>
+      <button class="btn btn-outline btn-sm" style="margin-top:8px;" onclick="fbSetRole(fbUser);showToast('Revisando...')">Ya me agrego</button></div>`;
+    return;
+  }
+  if (!fbIsOwner) { el.innerHTML = ''; return; }
+  const ids = Object.keys(opList);
+  el.innerHTML = `<div class="room-panel" style="text-align:left;">
+    <h3 style="font-size:0.95rem;margin-bottom:4px;">Operadores del proyector</h3>
+    <p style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:10px;">Pueden abrir la sala y manejar el data (canciones, Biblia, videos, avisos)
+      con su propia cuenta. No pueden publicar ni borrar la biblioteca.</p>
+    ${ids.length ? ids.map(id => `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);">
+      <span style="flex:1;font-size:0.85rem;"><b>${esc((opList[id] && opList[id].nombre) || 'Operador')}</b>
+      <span style="color:var(--text-muted);font-family:monospace;font-size:0.7rem;"> ${esc(id.slice(0, 8))}...</span></span>
+      <button class="btn btn-outline btn-sm" onclick="removeOp('${id}')">Quitar</button></div>`).join('')
+      : '<p style="font-size:0.8rem;color:var(--text-muted);">Todavia no hay operadores.</p>'}
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">
+      <input id="opName" placeholder="Nombre (ej. Felipe)" style="flex:1;min-width:110px;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text-primary);">
+      <input id="opUid" placeholder="Codigo (UID)" style="flex:2;min-width:150px;padding:8px;border:1px solid var(--border);border-radius:8px;font-family:monospace;background:var(--surface);color:var(--text-primary);">
+      <button class="btn btn-primary btn-sm" onclick="addOp()">Agregar</button></div>
+    <p style="font-size:0.72rem;color:var(--text-muted);margin-top:8px;line-height:1.45;">El codigo aparece en la app cuando el operador entra con su cuenta,
+      o en Firebase &rsaquo; Authentication (columna "UID de usuario").</p></div>`;
+}
+async function addOp() {
+  const nombre = document.getElementById('opName').value.trim() || 'Operador';
+  const uid = document.getElementById('opUid').value.trim();
+  if (!/^[A-Za-z0-9]{20,40}$/.test(uid)) { showToast('Codigo (UID) no valido'); return; }
+  if (uid === DIRECTOR_UID) { showToast('Ese es el director'); return; }
+  try { await FB.set(FB.ref(fbDb, 'operadores/' + uid), { nombre: nombre, desde: FB.serverTimestamp() }); showToast(nombre + ' agregado'); }
+  catch (e) { showToast(String(e.code || e).includes('PERMISSION') ? 'Sin permiso: primero actualiza las reglas de Firebase' : 'Error: ' + (e.code || e.message)); }
+}
+async function removeOp(uid) {
+  if (!confirm('Quitar a ' + ((opList[uid] && opList[uid].nombre) || 'este operador') + '?')) return;
+  try { await FB.remove(FB.ref(fbDb, 'operadores/' + uid)); } catch (e) { showToast('Error: ' + (e.code || e.message)); }
+}
 let libUnsub = null, roomUnsub = null, membersUnsub = null;
 
 function fbGetConfig() {
@@ -2667,12 +2732,12 @@ async function fbInit(silent) {
     if (!restored) await FB.signInAnonymously(fbAuth);
 
     fbUser = fbAuth.currentUser;
-    fbIsDirector = !!fbUser && !fbUser.isAnonymous;
+    fbSetRole(fbUser);
 
     // Si la sesion cambia despues (entrar o salir), refrescar la interfaz
     FB.onAuthStateChanged(fbAuth, u => {
       fbUser = u;
-      fbIsDirector = !!u && !u.isAnonymous;
+      fbSetRole(u);
       updateDirectorUI();
     });
 
@@ -2783,7 +2848,7 @@ async function fbTest() {
   const ok = await fbInit(true);
   if (!ok) { logTo('fbLog', 'No se pudo iniciar. Revisa apiKey y databaseURL.', 'error'); return; }
   logTo('fbLog', fbIsDirector
-    ? 'Sesion de DIRECTOR (uid ' + fbUser.uid.slice(0, 8) + '...)'
+    ? 'Sesion de ' + (fbIsOwner ? 'DIRECTOR' : 'OPERADOR') + ' (uid ' + fbUser.uid.slice(0, 8) + '...)'
     : 'Sesion anonima (solo lectura). Presiona "Entrar como director" para publicar.',
     fbIsDirector ? 'ok' : 'error');
   try {
@@ -2809,9 +2874,10 @@ async function fbLoginDirector() {
   try {
     await FB.signInWithEmailAndPassword(fbAuth, email, pass);
     fbUser = fbAuth.currentUser;
-    fbIsDirector = !!fbUser && !fbUser.isAnonymous;
+    fbSetRole(fbUser);
     closeModal('dirLoginModal');
-    showToast('Entraste como director');
+    setTimeout(() => showToast(fbRole === 'director' ? 'Entraste como director' : fbRole === 'operador' ? 'Entraste como operador'
+      : 'Cuenta sin autorizar: pide al director que te agregue'), 900);
     updateDirectorUI();
     watchLibrary();
   } catch (e) {
@@ -2824,9 +2890,9 @@ async function fbLoginDirector() {
 
 async function fbLogoutDirector() {
   try { await FB.signOut(fbAuth); } catch (e) {}
-  fbIsDirector = false;
+  fbIsDirector = false; fbIsOwner = false; fbRole = '';
   fbReady = false; fbUser = null;
-  showToast('Saliste del modo director');
+  showToast('Sesion cerrada');
   updateDirectorUI();
   setTimeout(() => location.reload(), 700);
 }
@@ -2834,14 +2900,16 @@ async function fbLogoutDirector() {
 function updateDirectorUI() {
   const on = fbIsDirector;
   const set = (id, show) => { const e = document.getElementById(id); if (e) e.style.display = show ? '' : 'none'; };
-  set('btnDirLogin',  !on);
-  set('btnDirLogout',  on);
-  set('btnPublishLib', on);
+  const logged = !!fbUser && !fbUser.isAnonymous;
+  set('btnDirLogin',  !logged);
+  set('btnDirLogout',  logged);
+  set('btnPublishLib', on && fbIsOwner);
   set('btnCreateRoom', on);
   set('navProj', on);
   if (typeof pjRenderView === 'function') pjRenderView();
   const b = document.getElementById('dirBadge');
-  if (b) { b.style.display = on ? 'inline-block' : 'none'; }
+  if (b) { b.style.display = on ? 'inline-block' : 'none'; b.textContent = fbIsOwner ? 'MODO DIRECTOR' : 'MODO OPERADOR'; }
+  renderOps();
 }
 
 // ─── Biblioteca compartida ───
@@ -2876,7 +2944,7 @@ function mergeKey(x) {
 
 async function publishLibrary() {
   if (!await fbInit()) return;
-  if (!fbIsDirector) { showToast('Entra como director primero'); return; }
+  if (!fbIsDirector) { showToast('Entra como director u operador primero'); return; }
 
   // Lo que ya esta publicado se suma, no se pisa.
   let remote = [], remoteDel = [];
@@ -2945,7 +3013,7 @@ async function publishLibrary() {
 async function createRoom() {
   const btn = document.getElementById('btnCreateRoom');
   if (!await fbInit()) return;
-  if (!fbIsDirector) { showToast('Entra como director primero'); return; }
+  if (!fbIsDirector) { showToast('Entra como director u operador primero'); return; }
   btn.disabled = true; btn.textContent = 'Creando...';
   roomCode = (() => { try { return localStorage.getItem('sala_fija') || ''; } catch (e) { return ''; } })() || genCode();
   try { localStorage.setItem('sala_fija', roomCode); } catch (e) {}
@@ -3965,7 +4033,7 @@ function pjRenderView() {
   if (!v || !v.classList.contains('active')) return;
   const box = document.getElementById('pjBody');
   if (!fbIsDirector) {
-    box.innerHTML = '<div class="pj-empty">Para controlar el proyector entra como director en la pestaña <b>Sala</b>.</div>';
+    box.innerHTML = '<div class="pj-empty">Para controlar el proyector entra como director u operador en la pestaña <b>Sala</b>.</div>';
     return;
   }
   if (role !== 'director' || !roomCode) {
@@ -4681,12 +4749,13 @@ async function installApp() {
 <div class="modal-overlay" id="dirLoginModal">
   <div class="modal" style="max-width:380px;">
     <div class="modal-header">
-      <h2>Entrar como director</h2>
+      <h2>Entrar (director u operador)</h2>
       <button class="modal-close" onclick="closeModal('dirLoginModal')">&times;</button>
     </div>
     <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:10px;">
       Usa el correo y la contrasena que creaste en Firebase (paso 4 de la guia).
-      Solo el director puede editar canciones y abrir salas.
+      El director publica la biblioteca y abre salas. Un operador (ej. quien maneja el data)
+      entra con su propia cuenta, una vez que el director lo agrega en Sala &rsaquo; Operadores.
     </p>
     <div class="form-group">
       <label>Correo</label>

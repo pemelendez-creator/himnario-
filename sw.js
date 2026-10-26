@@ -2,7 +2,7 @@
    Guarda la app completa en el celular para que abra sin señal.
    Al publicar una version nueva, sube CACHE_VERSION para forzar la actualizacion. */
 
-const CACHE_VERSION = 'himnario-v24';
+const CACHE_VERSION = 'himnario-v25';
 const ASSETS = [
   './',
   './index.html',
