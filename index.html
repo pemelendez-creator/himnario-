@@ -2020,6 +2020,15 @@ body.pj-obs-mode #obsScreen { display: block; position: fixed; inset: 0; font-fa
 .cd-item.part { color: #f0b37e; }
 .cd-item em { font-style: normal; color: #8b949e; font-size: .8em; }
 #cdEl.over { color: #ff7b72; }
+/* v29: QR grandes arriba de la cuenta regresiva */
+.pj-rq-row { display: flex; gap: calc(var(--h) * 0.08); justify-content: center; align-items: flex-start; margin-bottom: calc(var(--h) * 0.03); }
+.pj-rq { display: flex; flex-direction: column; align-items: center; }
+.pj-rq-row .pj-qrbox { width: calc(var(--h) * 0.46); height: calc(var(--h) * 0.46); }
+.pj-rq-row.n2 .pj-qrbox { width: calc(var(--h) * 0.4); height: calc(var(--h) * 0.4); }
+.pj-rq-t { font-size: calc(var(--h) * 0.036); font-weight: 700; margin-top: calc(var(--h) * 0.012); text-shadow: 0 1px 5px #000;
+  max-width: calc(var(--h) * 0.6); text-align: center; line-height: 1.2; }
+.pj-clock-l.sm { font-size: calc(var(--h) * 0.045); }
+.pj-clock.sm { font-size: calc(var(--h) * 0.17); }
 </style>
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#1f6feb">
@@ -2376,7 +2385,7 @@ const LOGO_PDF_URL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAYA
 const STORAGE_KEY = 'himnario_data';
 const SERVICE_KEY = 'himnario_service';
 const HYMNAL_VERSION = 'v20_completo';
-const APP_BUILD = 'v28';
+const APP_BUILD = 'v29';
 
 let hymns = [];
 let serviceList = [];
@@ -3700,7 +3709,8 @@ function pjRender(root, st, img) {
   const md = modo === 'media' ? (st.media || null) : null;
   const isVid = !!md && (md.tipo === 'yt' || md.tipo === 'pcvideo' || md.tipo === 'url');
   root.classList.toggle('pj-mediamode', !!md);
-  root.classList.toggle('has-mark', est.marca !== false && modo !== 'logo' && modo !== 'negro' && modo !== 'reloj' && !isVid);
+  const rqs = modo === 'reloj' && st.reloj ? pjRelojQRs(st.reloj) : [];
+  root.classList.toggle('has-mark', est.marca !== false && modo !== 'logo' && modo !== 'negro' && (modo !== 'reloj' || rqs.length > 0) && !isVid);
   const showing = modo === 'reloj' && !!(st.reloj && st.reloj.fotos);
   const wasShowing = root.classList.contains('pj-showing');
   root.classList.toggle('pj-showing', showing);
@@ -3726,9 +3736,13 @@ function pjRender(root, st, img) {
     key = 't|' + sl.texto + '|' + est.mayus + '|' + est.tam + '|' + sl.tipo;
   } else if (modo === 'reloj' && st.reloj) {
     const ls = pjLogoSrc();
-    html = (ls ? '<img class="pj-logoimg sm" src="' + ls + '" alt="">' : '') +
+    if (rqs.length) {          // codigos QR grandes arriba y la cuenta regresiva abajo
+      html = '<div class="pj-rq-row n' + rqs.length + '">' + rqs.map(q => '<div class="pj-rq"><div class="pj-qrbox">' + pjQR(q.url) + '</div>' +
+        '<div class="pj-rq-t">' + esc(q.texto || '') + '</div></div>').join('') + '</div>' +
+        '<div class="pj-clock-l sm">' + esc(st.reloj.texto || '') + '</div><div class="pj-clock sm">--:--</div>';
+    } else html = (ls ? '<img class="pj-logoimg sm" src="' + ls + '" alt="">' : '') +
       '<div class="pj-clock-l">' + esc(st.reloj.texto || '') + '</div><div class="pj-clock">--:--</div>';
-    key = 'r|' + st.reloj.hasta + '|' + st.reloj.texto;
+    key = 'r|' + st.reloj.hasta + '|' + st.reloj.texto + '|' + JSON.stringify(rqs);
   } else if (modo === 'qr' && st.qr) {
     html = '<div class="pj-qrbox">' + pjQR(st.qr.url) + '</div><div class="pj-qr-t">' + esc(st.qr.texto || '') + '</div><div class="pj-qr-s">' + esc(st.qr.sub || '') + '</div>';
     key = 'q|' + st.qr.url;
@@ -4138,7 +4152,7 @@ function pjClock(min) {
   if (min === undefined) min = parseFloat(document.getElementById('pjClockMin').value);
   if (!(min > 0)) { showToast('Indica los minutos'); return; }
   const t = document.getElementById('pjClockTxt').value.trim();
-  pjState.reloj = { hasta: Date.now() + pjOffset + Math.round(min * 60000), texto: t, fotos: !!document.getElementById('pjClockFotos').checked };
+  pjState.reloj = { hasta: Date.now() + pjOffset + Math.round(min * 60000), texto: t, fotos: !!document.getElementById('pjClockFotos').checked, qr: pjRelojQRCfg() };
   pjState.modo = 'reloj';
   pjPush();
 }
@@ -4383,7 +4397,15 @@ function pjRenderTab() {
       <label class="pj-row" style="font-size:.88rem;cursor:pointer;"><input type="checkbox" id="pjClockFotos" ${r.fotos !== false ? 'checked' : ''}
         onchange="if(pjState.reloj){pjState.reloj.fotos=this.checked;if(pjState.modo==='reloj')pjPush();}">
         Mostrar fotos de fondo (cambian cada 7 segundos)</label>
-      <div class="pj-help">Las fotos salen de "Videos y fotos": las subidas desde este aparato y las guardadas en el computador del data. El logo de la iglesia aparece arriba del reloj.</div>
+      <div class="pj-h">Codigos QR arriba de la cuenta regresiva</div>
+      <label class="pj-row" style="font-size:.88rem;cursor:pointer;margin-bottom:4px;"><input type="checkbox" id="pjRqCor" ${pjRqGet().cor ? 'checked' : ''} onchange="pjRelojQRChange()">
+        QR para coristas y musicos (se unen a la sala)</label>
+      <label class="pj-row" style="font-size:.88rem;cursor:pointer;margin-bottom:4px;"><input type="checkbox" id="pjRqOwn" ${pjRqGet().own ? 'checked' : ''} onchange="pjRelojQRChange()">
+        Otro QR (Facebook, YouTube, web, ofrenda...)</label>
+      <div class="pj-row"><input id="pjRqUrl" style="flex:2;min-width:180px;" placeholder="Link, ej: https://facebook.com/..." value="${esc(pjRqGet().url || '')}" onchange="pjRelojQRChange()">
+        <input id="pjRqTxt" style="flex:1;min-width:130px;" placeholder="Texto, ej: Siguenos en Facebook" value="${esc(pjRqGet().txt || '')}" onchange="pjRelojQRChange()"></div>
+      <div class="pj-help">Los QR salen grandes arriba y la cuenta regresiva abajo (el logo pasa a la esquina). Sin QR, el logo aparece arriba del reloj.
+        Las fotos de fondo salen de "Videos y fotos".</div>
       <div class="pj-help">La cuenta regresiva aparece en grande en la pantalla del data. Para volver a las canciones toca una estrofa o "Texto".</div>`;
   } else if (pjTab === 'fondo') {
     const e = pjState.estilo;
@@ -4440,6 +4462,25 @@ function pjBoot() {
     if (!code) { try { code = localStorage.getItem('cd_code') || ''; } catch (e) {} }
     pjStartCoord(code);
   }
+}
+
+// ─── QR en la cuenta regresiva ───
+function pjRqGet() { try { return Object.assign({ cor: true, own: false, url: '', txt: '' }, JSON.parse(localStorage.getItem('pj_rq') || '{}')); } catch (e) { return { cor: true, own: false, url: '', txt: '' }; } }
+function pjRelojQRCfg() {
+  const c = pjRqGet(), out = [];
+  if (c.cor && roomCode) out.push({ url: pjJoinURL(), texto: 'Coristas y musicos: unanse aqui' });
+  if (c.own && /^https?:\/\/\S+$/i.test(c.url || '')) out.push({ url: c.url, texto: c.txt || '' });
+  return out;
+}
+function pjRelojQRs(r) { return Array.isArray(r.qr) ? r.qr : (r.qr ? Object.values(r.qr) : []); }
+function pjRelojQRChange() {
+  let url = (document.getElementById('pjRqUrl').value || '').trim();
+  if (url && !/^https?:\/\//i.test(url)) url = 'https://' + url;
+  const c = { cor: document.getElementById('pjRqCor').checked, own: document.getElementById('pjRqOwn').checked, url: url,
+    txt: (document.getElementById('pjRqTxt').value || '').trim() };
+  if (c.own && !url) showToast('Pega el link para el otro QR');
+  try { localStorage.setItem('pj_rq', JSON.stringify(c)); } catch (e) {}
+  if (pjState.reloj) { pjState.reloj.qr = pjRelojQRCfg(); if (pjState.modo === 'reloj') pjPush(); }
 }
 
 // ═══════════════════════════════════════
