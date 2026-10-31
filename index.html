@@ -2047,6 +2047,7 @@ body.pj-obs-mode #obsScreen { display: block; position: fixed; inset: 0; font-fa
 .pj-fcard.live { border-color: #dc3545; box-shadow: 0 0 0 2px rgba(220,53,69,.35); }
 .pj-fbg { display: block; font-style: normal; font-size: .68rem; font-weight: 600; text-align: center; padding: 4px; border-top: 1px solid var(--border); color: var(--primary); }
 .pj-fbg.on { background: var(--accent-light); color: var(--accent); }
+.pj-sw.pj-sw-igual { display: flex; align-items: center; justify-content: center; font-size: .7rem; font-weight: 600; background: var(--surface-2); color: var(--text-secondary); }
 </style>
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#1f4d2b">
@@ -2405,7 +2406,7 @@ const SERVICE_KEY = 'himnario_service';
 const HYMNAL_VERSION = 'v34_seleccion';
 /* Biblioteca = solo la seleccion del Excel. La primera publicacion reemplaza la biblioteca vieja completa. */
 const BASE_SET = 'seleccion-65-2026-11';
-const APP_BUILD = 'v41';
+const APP_BUILD = 'v42';
 
 let hymns = [];
 let serviceList = [];
@@ -3666,7 +3667,7 @@ const PJ_FONDO_NOMBRES = { verde:'Verde IPB', negro:'Negro', noche:'Noche', azul
   morado:'Morado', dorado:'Dorado', gris:'Gris', img:'Mi imagen' };
 
 function pjDefaults() {
-  return { modo: 'logo', slide: null, fondo: 'verde', estilo: { tam: 1, mayus: false, pie: true, marca: true },
+  return { modo: 'logo', slide: null, fondo: 'verde', fondoLetra: 'azul', estilo: { tam: 1, mayus: false, pie: true, marca: true },
            ticker: { on: false, texto: '' }, reloj: null, v: 0 };
 }
 let pjState = (() => {
@@ -3731,8 +3732,10 @@ function pjRender(root, st, img) {
   if (st.slide && st.slide.tipo === 'parte' && modo === 'texto') modo = 'logo';
   const sinTexto = !!(st.slide && st.slide.tipo === 'parte');   // el nombre de la parte nunca se dibuja en el data
 
-  // fondo
-  const f = st.fondo || 'verde';
+  // fondo: uno para la letra (canciones, Biblia, avisos) y otro para cuando no hay letra
+  const conLetra = modo === 'texto' && st.slide && st.slide.texto && !sinTexto;
+  const fl = st.fondoLetra === undefined ? 'azul' : st.fondoLetra;
+  const f = (conLetra && fl && fl !== 'igual' && (PJ_FONDOS[fl] || fl === 'img')) ? fl : (st.fondo || 'verde');
   root.querySelector('.pj-bg').style.background = PJ_FONDOS[f] || PJ_FONDOS.verde;
   const im = root.querySelector('.pj-img');
   if (f === 'img' && img) { if (im._src !== img) { im.style.backgroundImage = 'url("' + img + '")'; im._src = img; } im.style.opacity = 1; }
@@ -4234,6 +4237,7 @@ function pjSetFondo(f) {
   if (f === 'img' && !pjImg) { document.getElementById('pjImgIn').click(); return; }
   pjState.fondo = f; pjPush(); pjRenderTab();
 }
+function pjSetFondoLetra(k) { pjState.fondoLetra = k; pjPush(); pjRenderTab(); }
 function pjImgFile(inp) {
   const file = inp.files && inp.files[0];
   if (!file) return;
@@ -4486,7 +4490,12 @@ function pjRenderTab() {
       <div class="pj-help">La cuenta regresiva aparece en grande en la pantalla del data. Para volver a las canciones toca una estrofa o "Texto".</div>`;
   } else if (pjTab === 'fondo') {
     const e = pjState.estilo;
-    el.innerHTML = `<div class="pj-h" style="margin-top:0;">Fondo</div><div class="pj-row">` +
+    const flc = pjState.fondoLetra === undefined ? 'azul' : pjState.fondoLetra;
+    el.innerHTML = `<div class="pj-h" style="margin-top:0;">Fondo de la letra <small style="font-weight:400;color:var(--text-secondary);">(canciones, Biblia y avisos)</small></div><div class="pj-row">` +
+      `<div class="pj-sw pj-sw-igual ${flc === 'igual' ? 'on' : ''}" title="Igual que el fondo de pantalla" onclick="pjSetFondoLetra('igual')">Igual</div>` +
+      Object.keys(PJ_FONDOS).map(k => `<div class="pj-sw ${flc === k ? 'on' : ''}" title="${PJ_FONDO_NOMBRES[k]}" style="background:${PJ_FONDOS[k]}" onclick="pjSetFondoLetra('${k}')"></div>`).join('') +
+      `</div><div class="pj-help" style="margin-top:0;">Al proyectar una alabanza el data cambia solo a este fondo; al terminar vuelve al fondo de pantalla.</div>
+      <div class="pj-h">Fondo de pantalla <small style="font-weight:400;color:var(--text-secondary);">(logo, partes del culto, al terminar)</small></div><div class="pj-row">` +
       Object.keys(PJ_FONDOS).map(k => `<div class="pj-sw ${pjState.fondo === k ? 'on' : ''}" title="${PJ_FONDO_NOMBRES[k]}" style="background:${PJ_FONDOS[k]}" onclick="pjSetFondo('${k}')"></div>`).join('') +
       `<div class="pj-sw ${pjState.fondo === 'img' ? 'on' : ''}" title="Mi imagen" onclick="pjSetFondo('img')"
          style="${pjImg ? 'background-image:url(' + pjImg + ')' : 'background:var(--surface-2);display:flex;align-items:center;justify-content:center;font-size:.65rem;color:var(--text-secondary);'}">${pjImg ? '' : 'Imagen'}</div>
@@ -5827,12 +5836,12 @@ function pjMisImgsHTML() {
     return `<div class="pj-fcard ${curM === id ? 'on live' : ''}" onclick="pjFondoProyectar('${id}')" title="Tocar para proyectar">
       <div class="pj-fimg" style="background-image:url('${f.img}')"></div>
       <span>${esc(f.nombre || 'Imagen')}${f.local ? ' · solo aqui' : ''}</span>
-      <i class="pj-fbg ${bg ? 'on' : ''}" onclick="event.stopPropagation();pjFondoUsar('${id}')">${bg ? 'Es el fondo' : 'Usar de fondo'}</i>
+      <i class="pj-fbg ${bg ? 'on' : ''}" onclick="event.stopPropagation();pjFondoUsar('${id}')">${bg ? 'Fondo de pantalla ✓' : 'Usar de fondo de pantalla'}</i>
       <b onclick="event.stopPropagation();pjFondoBorrar('${id}')" title="Borrar">&#10005;</b></div>`;
   }).join('');
   return `<div class="pj-h">Mis imagenes guardadas <small style="font-weight:400;color:var(--text-secondary);">(se suben una vez y quedan en todos los aparatos)</small></div>
     <div class="pj-help" style="margin-top:0;">Toca la imagen para <b>proyectarla</b>: se va sola cuando proyectas otra cosa (cancion, Biblia, aviso).
-      "Usar de fondo" la deja <b>detras de la letra</b> todo el tiempo.</div>
+      "Usar de fondo de pantalla" la deja puesta cuando no hay letra (logo, partes, al terminar la cancion).</div>
     <div class="pj-fgrid">${cards}
       <label class="pj-fcard pj-fadd"><input type="file" accept="image/*" style="display:none" onchange="pjFondoAgregar(this)">
         <div class="pj-fimg">+</div><span>Agregar imagen</span></label></div>
