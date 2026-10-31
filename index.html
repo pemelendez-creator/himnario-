@@ -1740,7 +1740,7 @@ body {
 .pj-bg, .pj-img { position: absolute; inset: 0; transition: opacity .5s; }
 .pj-img { background-size: cover; background-position: center; opacity: 0; }
 .pj-img::after { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,var(--osc,.2)); opacity: 0; transition: opacity .5s; }
-.pj-root.pj-txt .pj-img::after { opacity: 1; }
+.pj-root.pj-contexto .pj-img::after { opacity: 1; }
 .pj-stage { position: absolute; left: 5%; right: 5%; top: 6%; bottom: 11%; transition: opacity .35s; }
 .pj-root.has-ticker .pj-stage { bottom: 17%; }
 .pj-layer { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
@@ -2044,6 +2044,9 @@ body.pj-obs-mode #obsScreen { display: block; position: fixed; inset: 0; font-fa
 .pj-fcard span { display: block; font-size: .72rem; padding: 4px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pj-fcard b { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%; background: rgba(0,0,0,.6); color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; }
 .pj-fadd { border-style: dashed; }
+.pj-fcard.live { border-color: #dc3545; box-shadow: 0 0 0 2px rgba(220,53,69,.35); }
+.pj-fbg { display: block; font-style: normal; font-size: .68rem; font-weight: 600; text-align: center; padding: 4px; border-top: 1px solid var(--border); color: var(--primary); }
+.pj-fbg.on { background: var(--accent-light); color: var(--accent); }
 </style>
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#1f4d2b">
@@ -2402,7 +2405,7 @@ const SERVICE_KEY = 'himnario_service';
 const HYMNAL_VERSION = 'v34_seleccion';
 /* Biblioteca = solo la seleccion del Excel. La primera publicacion reemplaza la biblioteca vieja completa. */
 const BASE_SET = 'seleccion-65-2026-11';
-const APP_BUILD = 'v39';
+const APP_BUILD = 'v40';
 
 let hymns = [];
 let serviceList = [];
@@ -3736,7 +3739,7 @@ function pjRender(root, st, img) {
 
   root.classList.toggle('pj-black', modo === 'negro');
   // v39: la imagen de fondo se oscurece solo cuando hay letra encima (y lo justo)
-  root.classList.toggle('pj-txt', modo === 'texto' || modo === 'reloj' || modo === 'qr');
+  root.classList.toggle('pj-contexto', modo === 'texto' || modo === 'reloj' || modo === 'qr');
   root.style.setProperty('--osc', est.osc === undefined ? 0.2 : est.osc);
   root.classList.toggle('pj-clean', modo === 'limpio');
   const md = modo === 'media' ? (st.media || null) : null;
@@ -5775,12 +5778,14 @@ function pjFondosWatch() {
     Object.keys(pjMisFondos).forEach(k => { if (pjMisFondos[k] && pjMisFondos[k].local && !v[k]) v[k] = pjMisFondos[k]; });
     pjMisFondos = v; pjFondosErr = '';
     pjFondosGuardarLocal();
-    if (typeof pjTab !== 'undefined' && pjTab === 'fondo') pjRenderTab();
+    if (typeof pjTab !== 'undefined' && (pjTab === 'fondo' || pjTab === 'medios')) pjRenderTab();
+    // la pantalla del data / vista previa: volver a dibujar si esperaba una imagen
+    document.querySelectorAll('.pj-root').forEach(r => { const b = r.querySelector('.pj-media'); if (b && /mifondo/.test(b._key || '') && r._st) { b._key = ''; r._key = ''; pjRender(r, r._st, (r.querySelector('.pj-img') || {})._src || ''); } });
   }, e => { pjFondosErr = (e && e.code) || 'error'; });
 }
 (function () {
   const q = new URLSearchParams(location.search);
-  if (q.has('pantalla') || q.has('coordinador') || q.has('obs')) return;
+  if (q.has('coordinador') || q.has('obs')) return;
   const t = setInterval(() => { if (fbReady && fbDb) { clearInterval(t); pjFondosWatch(); } }, 1500);
 })();
 
@@ -5791,6 +5796,45 @@ function pjFondoUsar(id) {
   try { localStorage.setItem('pj_img', f.img); } catch (e) {}
   pjState.fondo = 'img';
   pjPushImg(); pjPush(); pjRenderTab();
+}
+/* v40: proyectar la imagen guardada como diapositiva (se va al proyectar otra cosa) */
+function pjFondoProyectar(id) {
+  const f = pjMisFondos[id];
+  if (!f || !f.img) return;
+  if (f.local) { showToast('Esta imagen esta solo en este aparato: actualiza las reglas de Firebase para que llegue al data'); }
+  pjMediaShow({ tipo: 'mifondo', id, nombre: f.nombre || 'Imagen' });
+  pjRenderTab();
+}
+function pjFondoQuitar() { pjState.fondo = 'verde'; pjPush(); pjRenderTab(); showToast('Fondo: Verde IPB'); }
+(function () {
+  const _mh = pjMediaHTML;
+  pjMediaHTML = function (root, md, isScreen) {
+    if (md && md.tipo === 'mifondo') {
+      const f = pjMisFondos[md.id];
+      return f && f.img ? '<img src="' + f.img + '" alt="">' : '<div class="pj-mlbl">Cargando imagen...</div>';
+    }
+    return _mh.apply(this, arguments);
+  };
+})();
+function pjMisImgsHTML() {
+  const ids = Object.keys(pjMisFondos).sort((a, b) => (pjMisFondos[a].ts || 0) - (pjMisFondos[b].ts || 0));
+  const curM = pjState.modo === 'media' && pjState.media && pjState.media.tipo === 'mifondo' ? pjState.media.id : '';
+  const cards = ids.map(id => {
+    const f = pjMisFondos[id], bg = pjState.fondo === 'img' && pjImg === f.img;
+    return `<div class="pj-fcard ${curM === id ? 'on live' : ''}" onclick="pjFondoProyectar('${id}')" title="Tocar para proyectar">
+      <div class="pj-fimg" style="background-image:url('${f.img}')"></div>
+      <span>${esc(f.nombre || 'Imagen')}${f.local ? ' · solo aqui' : ''}</span>
+      <i class="pj-fbg ${bg ? 'on' : ''}" onclick="event.stopPropagation();pjFondoUsar('${id}')">${bg ? 'Es el fondo' : 'Usar de fondo'}</i>
+      <b onclick="event.stopPropagation();pjFondoBorrar('${id}')" title="Borrar">&#10005;</b></div>`;
+  }).join('');
+  return `<div class="pj-h">Mis imagenes guardadas <small style="font-weight:400;color:var(--text-secondary);">(se suben una vez y quedan en todos los aparatos)</small></div>
+    <div class="pj-help" style="margin-top:0;">Toca la imagen para <b>proyectarla</b>: se va sola cuando proyectas otra cosa (cancion, Biblia, aviso).
+      "Usar de fondo" la deja <b>detras de la letra</b> todo el tiempo.</div>
+    <div class="pj-fgrid">${cards}
+      <label class="pj-fcard pj-fadd"><input type="file" accept="image/*" style="display:none" onchange="pjFondoAgregar(this)">
+        <div class="pj-fimg">+</div><span>Agregar imagen</span></label></div>
+    ${pjState.fondo === 'img' ? '<div class="pj-row"><button class="pj-chip" onclick="pjFondoQuitar()">Quitar la imagen de fondo (volver a Verde IPB)</button></div>' : ''}
+    ${pjFondosErr ? '<div class="pj-help" style="color:#c0392b;">No se pudieron leer las imagenes guardadas (' + esc(pjFondosErr) + '). Revisa las reglas de Firebase.</div>' : ''}`;
 }
 function pjFondoBorrar(id) {
   const f = pjMisFondos[id];
@@ -5817,10 +5861,10 @@ function pjFondoAgregar(inp) {
       const nombre = (file.name || 'Fondo').replace(/\.[^.]+$/, '').slice(0, 40);
       const f = { img: data, nombre, ts: Date.now() };
       pjMisFondos[id] = f;
-      pjFondoUsar(id);
+      if (pjFondoAgregar._comoFondo) { pjFondoAgregar._comoFondo = false; pjFondoUsar(id); } else pjFondoProyectar(id);
       if (fbReady && fbDb) {
         FB.set(FB.ref(fbDb, 'fondos/' + id), f)
-          .then(() => showToast('Fondo guardado para siempre'))
+          .then(() => showToast('Imagen guardada para siempre'))
           .catch(e => {
             pjMisFondos[id].local = true; pjFondosGuardarLocal(); pjRenderTab();
             showToast('Guardado solo en este aparato (faltan las reglas de Firebase "fondos")');
@@ -5832,34 +5876,35 @@ function pjFondoAgregar(inp) {
   rd.readAsDataURL(file);
 }
 // cualquier imagen que suban queda guardada en "Mis fondos"
-pjImgFile = pjFondoAgregar;
+pjImgFile = function (inp) { pjFondoAgregar._comoFondo = true; pjFondoAgregar(inp); };
 
 (function () {
   const _rt = pjRenderTab;
   pjRenderTab = function () {
     _rt.apply(this, arguments);
-    if (pjTab !== 'fondo') return;
-    const inp = document.getElementById('pjImgIn');
-    if (!inp) return;
-    const row = inp.closest('.pj-row');
-    const ids = Object.keys(pjMisFondos).sort((a, b) => (pjMisFondos[a].ts || 0) - (pjMisFondos[b].ts || 0));
-    const cards = ids.map(id => {
-      const f = pjMisFondos[id], on = pjState.fondo === 'img' && pjImg === f.img;
-      return `<div class="pj-fcard ${on ? 'on' : ''}" onclick="pjFondoUsar('${id}')" title="${esc(f.nombre || '')}">
-        <div class="pj-fimg" style="background-image:url('${f.img}')"></div>
-        <span>${esc(f.nombre || 'Fondo')}${f.local ? ' · solo aqui' : ''}</span>
-        <b onclick="event.stopPropagation();pjFondoBorrar('${id}')" title="Borrar">&#10005;</b></div>`;
-    }).join('');
-    const html = `<div class="pj-h">Mis fondos guardados <small style="font-weight:400;color:var(--text-secondary);">(se suben una vez y quedan en todos los aparatos)</small></div>
-      <div class="pj-fgrid">${cards}
-        <label class="pj-fcard pj-fadd"><input type="file" accept="image/*" style="display:none" onchange="pjFondoAgregar(this)">
-          <div class="pj-fimg">+</div><span>Agregar fondo</span></label></div>
-      ${pjFondosErr ? '<div class="pj-help" style="color:#c0392b;">No se pudieron leer los fondos guardados (' + esc(pjFondosErr) + '). Revisa las reglas de Firebase.</div>' : ''}`;
-    row.outerHTML = html;
-    // el input original sigue existiendo (oculto) por si otra parte lo usa
-    if (!document.getElementById('pjImgIn')) document.body.insertAdjacentHTML('beforeend', '<input type="file" id="pjImgIn" accept="image/*" style="display:none" onchange="pjFondoAgregar(this)">');
+    if (pjTab === 'fondo') {
+      const inp = document.getElementById('pjImgIn');
+      if (!inp) return;
+      inp.closest('.pj-row').outerHTML = pjMisImgsHTML();
+      if (!document.getElementById('pjImgIn')) document.body.insertAdjacentHTML('beforeend', '<input type="file" id="pjImgIn" accept="image/*" style="display:none" onchange="pjImgFile(this)">');
+    } else if (pjTab === 'medios') {
+      const el = document.getElementById('pjTabBody') || document.querySelector('#pjFotoList');
+      const host = document.getElementById('pjFotoList');
+      if (host && !document.getElementById('pjMisImgs')) host.insertAdjacentHTML('afterend', '<div id="pjMisImgs">' + pjMisImgsHTML() + '</div>');
+    }
   };
 })();
+// al cambiar lo que esta en pantalla, marcar la imagen activa
+(function () {
+  const _rl = pjRenderLive;
+  pjRenderLive = function () {
+    _rl.apply(this, arguments);
+    const curM = pjState.modo === 'media' && pjState.media && pjState.media.tipo === 'mifondo' ? pjState.media.id : '';
+    document.querySelectorAll('.pj-fcard[onclick^="pjFondoProyectar"]').forEach(c => c.classList.toggle('live', !!curM && c.getAttribute('onclick').indexOf("'" + curM + "'") >= 0));
+  };
+})();
+// v40: en la v37 cada imagen subida quedaba como fondo detras de todo; se vuelve al Verde IPB una sola vez
+try { if (!localStorage.getItem('pj_v40_fondo')) { if (pjState.fondo === 'img') { pjState.fondo = 'verde'; pjSaveLocal(); } localStorage.setItem('pj_v40_fondo', '1'); } } catch (e) {}
 
 init();
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', pjBoot); else pjBoot();
