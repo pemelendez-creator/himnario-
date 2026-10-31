@@ -2385,7 +2385,7 @@ const LOGO_PDF_URL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAYA
 const STORAGE_KEY = 'himnario_data';
 const SERVICE_KEY = 'himnario_service';
 const HYMNAL_VERSION = 'v20_completo';
-const APP_BUILD = 'v29';
+const APP_BUILD = 'v30';
 
 let hymns = [];
 let serviceList = [];
@@ -3970,11 +3970,37 @@ function pjOnRoomEnd() { pjUnsubs.forEach(u => { try { u(); } catch (e) {} }); p
 function pjScreenURL() { return location.origin + location.pathname + '?pantalla=' + (roomCode || localStorage.getItem('sala_fija') || ''); }
 
 // ─── Diapositivas ───
+/* Estrofas en orden de canto: en los himnos el coro viene escrito una sola vez
+   (despues de la estrofa 1); aqui se repite despues de cada estrofa. */
+function pjSongBlocks(h) {
+  const B = stripChords(liveLyrics(h)).replace(/\s+$/, '').split(/\n[ \t]*\n+/)
+    .map((t, si) => ({ t, si })).filter(b => b.t.trim());
+  if (pjState.estilo && pjState.estilo.coro === false) return B;
+  const num = b => /^\s*\d+\s*[.)\-–]/.test(b.t);
+  const groups = [], pre = [];
+  B.forEach(b => { if (num(b)) groups.push({ s: b, extra: [] }); else if (groups.length) groups[groups.length - 1].extra.push(b); else pre.push(b); });
+  if (groups.length < 2) return B;
+  const sig = l => l.map(b => b.t.replace(/\s+/g, ' ').trim()).join('|');
+  const g1 = groups[0].extra, rest = groups.slice(1);
+  // el coro son los ultimos bloques de la estrofa 1 que las demas estrofas no traen
+  // (si cada estrofa tiene su propia segunda parte, esa parte no es coro)
+  for (let c = g1.length; c >= 1; c--) {
+    const coro = g1.slice(-c), cs = sig(coro), own = g1.length - c;
+    const has = g => g.extra.length >= c && sig(g.extra.slice(-c)) === cs;
+    if (!rest.every(g => (has(g) ? g.extra.length - c : g.extra.length) === own) || rest.every(has)) continue;
+    const out = pre.slice();
+    groups.forEach(g => { out.push(g.s); g.extra.forEach(b => out.push(b)); if (!has(g)) coro.forEach(b => out.push(b)); });
+    return out;
+  }
+  return B;
+}
+
 function pjSongSlides(h, songIdx) {
   const n = hymnNum(h);
   const ref = (n !== null ? n + ' · ' : '') + h.title;
   const out = [];
-  stripChords(liveLyrics(h)).replace(/\s+$/, '').split(/\n[ \t]*\n+/).forEach((st, si) => {
+  pjSongBlocks(h).forEach(b => {
+    const st = b.t, si = b.si;
     const lines = st.split('\n').map(l => l.trim()).filter(Boolean);
     if (!lines.length) return;
     lines[0] = lines[0].replace(/^\d+\s*[.)\-–]\s*/, '');
@@ -4188,6 +4214,11 @@ function pjImgFile(inp) {
 function pjEstilo(k, v) {
   if (k === 'tam') pjState.estilo.tam = Math.max(0.5, Math.min(1.8, Math.round((pjState.estilo.tam + v) * 10) / 10));
   else pjState.estilo[k] = v;
+  if (k === 'coro' && pjDeck.tipo === 'cancion' && !pjDeck.parte && pjDeck.items.length) {   // rehacer las diapositivas de la cancion actual
+    const i = pjDeck.idx, si = pjDeck.songIdx;
+    if (si >= 0) pjLoadSong(si); else { const h = hymns.find(x => x.title === pjDeck.titulo); if (h) pjLoadSong(-1, h); }
+    pjDeck.idx = Math.min(i, pjDeck.items.length - 1);
+  }
   pjPush(); pjRenderTab();
 }
 
@@ -4422,7 +4453,8 @@ function pjRenderTab() {
         <button class="pj-chip" onclick="pjEstilo('tam',0.1)">A+</button></div>
       <div class="pj-row"><button class="pj-chip ${e.mayus ? 'on' : ''}" onclick="pjEstilo('mayus',${!e.mayus})">MAYUSCULAS</button>
         <button class="pj-chip ${e.pie ? 'on' : ''}" onclick="pjEstilo('pie',${!e.pie})">Titulo / cita abajo</button>
-        <button class="pj-chip ${e.marca !== false ? 'on' : ''}" onclick="pjEstilo('marca',${e.marca === false})">Logo en la esquina</button></div>
+        <button class="pj-chip ${e.marca !== false ? 'on' : ''}" onclick="pjEstilo('marca',${e.marca === false})">Logo en la esquina</button>
+        <button class="pj-chip ${e.coro !== false ? 'on' : ''}" onclick="pjEstilo('coro',${e.coro === false})">Repetir el coro en cada estrofa</button></div>
       <div class="pj-help">La letra siempre se ajusta sola para caber completa; "Tamaño maximo" limita lo grande que puede llegar a ser.</div>`;
   }
   pjMarkCards(false);
