@@ -1739,7 +1739,8 @@ body {
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; user-select: none; }
 .pj-bg, .pj-img { position: absolute; inset: 0; transition: opacity .5s; }
 .pj-img { background-size: cover; background-position: center; opacity: 0; }
-.pj-img::after { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,.38); }
+.pj-img::after { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,var(--osc,.2)); opacity: 0; transition: opacity .5s; }
+.pj-root.pj-txt .pj-img::after { opacity: 1; }
 .pj-stage { position: absolute; left: 5%; right: 5%; top: 6%; bottom: 11%; transition: opacity .35s; }
 .pj-root.has-ticker .pj-stage { bottom: 17%; }
 .pj-layer { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
@@ -2401,7 +2402,7 @@ const SERVICE_KEY = 'himnario_service';
 const HYMNAL_VERSION = 'v34_seleccion';
 /* Biblioteca = solo la seleccion del Excel. La primera publicacion reemplaza la biblioteca vieja completa. */
 const BASE_SET = 'seleccion-65-2026-11';
-const APP_BUILD = 'v38';
+const APP_BUILD = 'v39';
 
 let hymns = [];
 let serviceList = [];
@@ -3734,6 +3735,9 @@ function pjRender(root, st, img) {
   else im.style.opacity = 0;
 
   root.classList.toggle('pj-black', modo === 'negro');
+  // v39: la imagen de fondo se oscurece solo cuando hay letra encima (y lo justo)
+  root.classList.toggle('pj-txt', modo === 'texto' || modo === 'reloj' || modo === 'qr');
+  root.style.setProperty('--osc', est.osc === undefined ? 0.2 : est.osc);
   root.classList.toggle('pj-clean', modo === 'limpio');
   const md = modo === 'media' ? (st.media || null) : null;
   const isVid = !!md && (md.tipo === 'yt' || md.tipo === 'pcvideo' || md.tipo === 'url');
@@ -4491,6 +4495,9 @@ function pjRenderTab() {
         <button class="pj-chip ${e.pie ? 'on' : ''}" onclick="pjEstilo('pie',${!e.pie})">Titulo / cita abajo</button>
         <button class="pj-chip ${e.marca !== false ? 'on' : ''}" onclick="pjEstilo('marca',${e.marca === false})">Logo en la esquina</button>
         <button class="pj-chip ${e.coro !== false ? 'on' : ''}" onclick="pjEstilo('coro',${e.coro === false})">Repetir el coro en cada estrofa</button></div>
+      <div class="pj-row"><span style="font-size:.85rem;">Oscurecer la imagen cuando hay letra</span>
+        ${[[0, 'Nada'], [0.2, 'Suave'], [0.35, 'Medio'], [0.5, 'Fuerte']].map(([v, t]) => `<button class="pj-chip ${(e.osc === undefined ? 0.2 : e.osc) === v ? 'on' : ''}" onclick="pjEstilo('osc',${v})">${t}</button>`).join('')}</div>
+      <div class="pj-help">Con "Logo" y "Limpiar" la imagen se ve con todo su brillo, sin oscurecer.</div>
       <div class="pj-help">La letra siempre se ajusta sola para caber completa; "Tamaño maximo" limita lo grande que puede llegar a ser.</div>`;
   }
   pjMarkCards(false);
