@@ -1291,8 +1291,8 @@ async function loadPDFLibs() {
   --primary-light: #e6f1e6;
   --accent: #b88a1e;
   --accent-light: #faf2dc;
-  --success: #1baf7a;
-  --success-light: #e6f7f0;
+  --success: #4c9f50;
+  --success-light: #e8f3e4;
   --warning: #eda100;
   --warning-light: #fef6e0;
   --surface: #fbfcfa;
@@ -1314,8 +1314,8 @@ async function loadPDFLibs() {
   --primary-light: #17301e;
   --accent: #d6b04a;
   --accent-light: #2b2412;
-  --success: #199e70;
-  --success-light: #0f2a20;
+  --success: #3a8a3f;
+  --success-light: #17301c;
   --warning: #c98500;
   --warning-light: #2a2010;
   --surface: #111a14;
@@ -1808,7 +1808,7 @@ body.pj-screen-mode #pjScreen { display: block; position: fixed; inset: 0; z-ind
   border-radius: 10px; padding: 8px 10px; line-height: 1.5; }
 .pj-status b { color: var(--text-primary); }
 .pj-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #aaa; margin-right: 4px; }
-.pj-dot.ok { background: #1baf7a; }
+.pj-dot.ok { background: #4c9f50; }
 .pj-modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .pj-modes button, .pj-navbig button, .pj-tabs button, .pj-chip { border: 1px solid var(--border); background: var(--surface);
   color: var(--text-primary); border-radius: 10px; padding: 10px 4px; font-weight: 700; font-size: .82rem; cursor: pointer; }
@@ -1986,7 +1986,7 @@ body.pj-coord-mode #coordScreen { display: flex; flex-direction: column; positio
 .hist-day div { color: var(--text-secondary); margin-top: 2px; }
 .diag-row { display: flex; gap: 10px; padding: 8px 4px; border-bottom: 1px solid var(--border); align-items: flex-start; font-size: .86rem; }
 .diag-row > span { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; flex: 0 0 auto; font-size: .8rem; }
-.diag-row.ok > span { background: #1baf7a; } .diag-row.bad > span { background: #dc3545; } .diag-row.warn > span { background: #eda100; }
+.diag-row.ok > span { background: #4c9f50; } .diag-row.bad > span { background: #dc3545; } .diag-row.warn > span { background: #eda100; }
 .diag-row small { display: block; color: var(--text-secondary); font-size: .76rem; margin-top: 2px; }
 .ens-row { display: flex; gap: 10px; padding: 9px 2px; border-bottom: 1px solid var(--border); font-size: .88rem; cursor: pointer; align-items: flex-start; }
 .ens-row input { width: 20px; height: 20px; flex: 0 0 auto; margin-top: 1px; }
@@ -2401,7 +2401,7 @@ const SERVICE_KEY = 'himnario_service';
 const HYMNAL_VERSION = 'v34_seleccion';
 /* Biblioteca = solo la seleccion del Excel. La primera publicacion reemplaza la biblioteca vieja completa. */
 const BASE_SET = 'seleccion-65-2026-11';
-const APP_BUILD = 'v37';
+const APP_BUILD = 'v38';
 
 let hymns = [];
 let serviceList = [];
