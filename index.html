@@ -2405,7 +2405,7 @@ const SERVICE_KEY = 'himnario_service';
 const HYMNAL_VERSION = 'v34_seleccion';
 /* Biblioteca = solo la seleccion del Excel. La primera publicacion reemplaza la biblioteca vieja completa. */
 const BASE_SET = 'seleccion-65-2026-11';
-const APP_BUILD = 'v40';
+const APP_BUILD = 'v41';
 
 let hymns = [];
 let serviceList = [];
@@ -3728,7 +3728,8 @@ function pjRender(root, st, img) {
   const est = Object.assign({ tam: 1, mayus: false, pie: true, marca: true }, st.estilo || {});
   let modo = st.modo || 'logo';
   // v36: las partes del culto (Bienvenida, Oracion...) son solo para el coordinador
-  if (st.slide && st.slide.tipo === 'parte' && (modo === 'texto' || modo === 'limpio')) modo = 'logo';
+  if (st.slide && st.slide.tipo === 'parte' && modo === 'texto') modo = 'logo';
+  const sinTexto = !!(st.slide && st.slide.tipo === 'parte');   // el nombre de la parte nunca se dibuja en el data
 
   // fondo
   const f = st.fondo || 'verde';
@@ -3766,7 +3767,7 @@ function pjRender(root, st, img) {
   // contenido
   let html = '', key = '';
   const sl = st.slide;
-  if ((modo === 'texto' || modo === 'limpio' || modo === 'negro') && sl && sl.texto) {
+  if ((modo === 'texto' || modo === 'limpio' || modo === 'negro') && sl && sl.texto && !sinTexto) {
     const cls = 'pj-txt' + (est.mayus ? ' up' : '') + (sl.tipo === 'biblia' ? ' biblia' : '');
     html = '<div class="' + cls + '">' + esc(sl.texto) + '</div>';
     key = 't|' + sl.texto + '|' + est.mayus + '|' + est.tam + '|' + sl.tipo;
@@ -3782,6 +3783,8 @@ function pjRender(root, st, img) {
   } else if (modo === 'qr' && st.qr) {
     html = '<div class="pj-qrbox">' + pjQR(st.qr.url) + '</div><div class="pj-qr-t">' + esc(st.qr.texto || '') + '</div><div class="pj-qr-s">' + esc(st.qr.sub || '') + '</div>';
     key = 'q|' + st.qr.url;
+  } else if ((modo === 'logo' || modo === 'texto') && f === 'img' && img) {
+    html = ''; key = 'soloimg';
   } else if (modo === 'logo' || modo === 'texto') {
     const src = pjLogoSrc();
     html = (src ? '<img class="pj-logoimg" src="' + src + '" alt="">' : '') +
@@ -4108,7 +4111,7 @@ function pjPrev() {
 function pjMode(m) {
   if (m === 'texto' && !pjState.slide) { showToast('Elige una diapositiva'); return; }
   if (m === 'negro' && pjState.modo === 'negro') m = pjState.slide ? 'texto' : 'logo';
-  if ((m === 'texto' || m === 'limpio') && pjState.slide && pjState.slide.tipo === 'parte') m = 'logo';
+  if (m === 'texto' && pjState.slide && pjState.slide.tipo === 'parte') m = 'logo';
   pjState.modo = m;
   pjPush();
 }
