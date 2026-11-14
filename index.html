@@ -2048,6 +2048,19 @@ body.pj-obs-mode #obsScreen { display: block; position: fixed; inset: 0; font-fa
 .pj-fbg { display: block; font-style: normal; font-size: .68rem; font-weight: 600; text-align: center; padding: 4px; border-top: 1px solid var(--border); color: var(--primary); }
 .pj-fbg.on { background: var(--accent-light); color: var(--accent); }
 .pj-sw.pj-sw-igual { display: flex; align-items: center; justify-content: center; font-size: .7rem; font-weight: 600; background: var(--surface-2); color: var(--text-secondary); }
+/* v43: predica / presentaciones */
+.pj-plist { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
+.pj-pitem { display: flex; align-items: center; gap: 10px; padding: 6px; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; background: var(--surface); position: relative; }
+.pj-pitem.on { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-light); }
+.pj-pitem img, .pj-pitem .ph { width: 96px; aspect-ratio: 16/9; object-fit: cover; border-radius: 6px; background: var(--surface-2); flex: none; }
+.pj-pitem b { display: block; font-size: .9rem; }
+.pj-pitem small { color: var(--text-secondary); font-size: .75rem; }
+.pj-pitem .x { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); padding: 6px; }
+.pj-pgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-top: 6px; }
+.pj-pcard { position: relative; border: 2px solid var(--border); border-radius: 8px; overflow: hidden; cursor: pointer; background: #000; }
+.pj-pcard img { width: 100%; aspect-ratio: 16/9; object-fit: contain; display: block; }
+.pj-pcard span { position: absolute; left: 4px; top: 4px; background: rgba(0,0,0,.65); color: #fff; font-size: .7rem; font-weight: 700; padding: 1px 6px; border-radius: 6px; }
+.pj-pcard.live { border-color: #dc3545; box-shadow: 0 0 0 2px rgba(220,53,69,.35); }
 </style>
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#1f4d2b">
@@ -2406,7 +2419,7 @@ const SERVICE_KEY = 'himnario_service';
 const HYMNAL_VERSION = 'v34_seleccion';
 /* Biblioteca = solo la seleccion del Excel. La primera publicacion reemplaza la biblioteca vieja completa. */
 const BASE_SET = 'seleccion-65-2026-11';
-const APP_BUILD = 'v42';
+const APP_BUILD = 'v43';
 
 let hymns = [];
 let serviceList = [];
@@ -6118,5 +6131,225 @@ async function installApp() {
     </div>
   </div>
 </div>
+<script>
+// ═══════════════════════════════════════
+// v43: PREDICA — presentaciones (PowerPoint exportado a PDF o imagenes)
+// Se suben una vez (Firebase: presentaciones/ y presentacionesIdx/), se
+// proyectan tocando cada diapositiva y tambien desde la app Biblia
+// (sermon › 📺 Data), que escribe en salas/CODIGO/proyector.
+// ═══════════════════════════════════════
+const PJ_PRES = {};            // id -> { s: [dataURL], cargando: Promise }
+let pjPresIdx = {}, pjPresIdxOn = false, pjPresSel = '';
+
+function pjPresWatch() {
+  if (pjPresIdxOn || !fbReady || !fbDb) return;
+  pjPresIdxOn = true;
+  FB.onValue(FB.ref(fbDb, 'presentacionesIdx'), s => {
+    pjPresIdx = s.val() || {};
+    if (typeof pjTab !== 'undefined' && pjTab === 'predica') pjRenderTab();
+  }, () => {});
+}
+(function () {
+  const q = new URLSearchParams(location.search);
+  if (q.has('coordinador') || q.has('obs')) return;
+  const t = setInterval(() => { if (fbReady && fbDb) { clearInterval(t); if (!q.has('pantalla')) pjPresWatch(); } }, 1500);
+})();
+
+/* descargar las diapositivas de una presentacion (una sola vez por aparato) */
+function pjPresLoad(id) {
+  const c = PJ_PRES[id] || (PJ_PRES[id] = {});
+  if (c.s) return Promise.resolve(c.s);
+  if (c.cargando) return c.cargando;
+  if (!fbReady || !fbDb) return Promise.resolve(null);
+  c.cargando = FB.get(FB.ref(fbDb, 'presentaciones/' + id + '/s')).then(sn => {
+    const v = sn.val();
+    c.s = Array.isArray(v) ? v : (v ? Object.keys(v).sort((a, b) => a - b).map(k => v[k]) : []);
+    c.cargando = null;
+    // volver a dibujar las pantallas que esperaban esta presentacion
+    document.querySelectorAll('.pj-root').forEach(r => {
+      const b = r.querySelector('.pj-media');
+      if (b && (b._key || '').indexOf('pres|' + id + '/') === 0 && r._st) { b._key = ''; r._key = ''; pjRender(r, r._st, (r.querySelector('.pj-img') || {})._src || ''); }
+    });
+    if (typeof pjTab !== 'undefined' && pjTab === 'predica' && pjPresSel === id) pjRenderTab();
+    return c.s;
+  }).catch(e => { c.cargando = null; console.warn('presentacion', e); return null; });
+  return c.cargando;
+}
+(function () {
+  const _mh = pjMediaHTML;
+  pjMediaHTML = function (root, md, isScreen) {
+    if (md && md.tipo === 'pres') {
+      const [id, n] = String(md.id || '').split('/');
+      const c = PJ_PRES[id];
+      if (c && c.s && c.s[+n]) return '<img src="' + c.s[+n] + '" alt="">';
+      pjPresLoad(id);
+      return '<div class="pj-mlbl">Cargando diapositiva...</div>';
+    }
+    return _mh.apply(this, arguments);
+  };
+})();
+
+/* ── proyectar ── */
+function pjPresOpen(id) {
+  pjPresSel = id;
+  pjPresLoad(id).then(() => { if (pjTab === 'predica') pjRenderTab(); });
+  pjRenderTab();
+}
+function pjPresDeck(id) {
+  const info = pjPresIdx[id] || {}, n = (PJ_PRES[id] && PJ_PRES[id].s ? PJ_PRES[id].s.length : info.n) || 0;
+  const items = [];
+  for (let i = 0; i < n; i++) items.push({ tipo: 'video', texto: 'Diapositiva ' + (i + 1), ref: '', pres: id,
+    media: { tipo: 'pres', id: id + '/' + i, nombre: (info.nombre || 'Presentacion') + ' · ' + (i + 1) + ' de ' + n } });
+  return { tipo: 'pres', items, idx: -1, songIdx: -1, titulo: info.nombre || '' };
+}
+function pjPresGo(id, i) {
+  if (pjDeck.tipo !== 'pres' || !pjDeck.items[0] || pjDeck.items[0].pres !== id) pjDeck = pjPresDeck(id);
+  pjGo(i);
+  if (pjTab === 'predica') pjPresMark();
+}
+function pjPresMark() {
+  const cur = pjState.modo === 'media' && pjState.media && pjState.media.tipo === 'pres' ? pjState.media.id : '';
+  document.querySelectorAll('.pj-pcard').forEach(c => c.classList.toggle('live', c.dataset.k === cur));
+}
+
+/* ── subir: PDF (exportado desde PowerPoint) o imagenes ── */
+let pjPdfLib = null;
+function pjPdfLoad() {
+  if (pjPdfLib) return pjPdfLib;
+  pjPdfLib = new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    s.onload = () => { try { pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; res(pdfjsLib); } catch (e) { rej(e); } };
+    s.onerror = () => { pjPdfLib = null; rej(new Error('sin internet')); };
+    document.head.appendChild(s);
+  });
+  return pjPdfLib;
+}
+function pjPresJpg(src, w, h) {
+  const sc = Math.min(1, 1600 / w, 1000 / h);
+  const cv = document.createElement('canvas');
+  cv.width = Math.round(w * sc); cv.height = Math.round(h * sc);
+  const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
+  g.drawImage(src, 0, 0, cv.width, cv.height);
+  let q = 0.82, d = cv.toDataURL('image/jpeg', q);
+  while (d.length > 300000 && q > 0.4) { q -= 0.1; d = cv.toDataURL('image/jpeg', q); }
+  return d;
+}
+function pjPresThumb(dataUrl) {
+  return new Promise(res => { const im = new Image(); im.onload = () => {
+    const cv = document.createElement('canvas'); const sc = 320 / im.width; cv.width = 320; cv.height = Math.round(im.height * sc);
+    cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height); res(cv.toDataURL('image/jpeg', 0.6)); }; im.onerror = () => res(''); im.src = dataUrl; });
+}
+function pjPresMsg(t) { const el = document.getElementById('pjPresMsg'); if (el) el.textContent = t; }
+async function pjPresSubir(inp) {
+  const files = [...(inp.files || [])]; inp.value = '';
+  if (!files.length) return;
+  if (!fbReady || !fbDb) { showToast('Abre la sala primero (necesita internet)'); return; }
+  const base = files[0].name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
+  const nombre = (prompt('Nombre de la presentacion (por ejemplo el titulo del sermon):', base) || '').trim();
+  if (!nombre) return;
+  const slides = [];
+  try {
+    for (const f of files) {
+      if (/pdf$/i.test(f.type) || /\.pdf$/i.test(f.name)) {
+        pjPresMsg('Abriendo el PDF...');
+        const lib = await pjPdfLoad();
+        const pdf = await lib.getDocument({ data: await f.arrayBuffer() }).promise;
+        for (let p = 1; p <= pdf.numPages; p++) {
+          pjPresMsg('Preparando diapositiva ' + p + ' de ' + pdf.numPages + '...');
+          const pg = await pdf.getPage(p);
+          const v0 = pg.getViewport({ scale: 1 }), vp = pg.getViewport({ scale: Math.min(3, 1600 / v0.width) });
+          const cv = document.createElement('canvas'); cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+          await pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+          slides.push(pjPresJpg(cv, cv.width, cv.height));
+        }
+      } else if (/^image\//.test(f.type)) {
+        pjPresMsg('Preparando imagen ' + (slides.length + 1) + '...');
+        const url = URL.createObjectURL(f);
+        const im = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+        slides.push(pjPresJpg(im, im.naturalWidth, im.naturalHeight)); URL.revokeObjectURL(url);
+      }
+    }
+  } catch (e) { pjPresMsg(''); showToast('No se pudo leer el archivo: ' + (e.message || e)); return; }
+  if (!slides.length) { pjPresMsg(''); showToast('Sube un PDF o imagenes'); return; }
+  const id = 'p' + Date.now();
+  pjPresMsg('Guardando ' + slides.length + ' diapositivas...');
+  try {
+    await FB.set(FB.ref(fbDb, 'presentaciones/' + id), { nombre, ts: Date.now(), n: slides.length, s: slides });
+    await FB.set(FB.ref(fbDb, 'presentacionesIdx/' + id), { nombre, ts: Date.now(), n: slides.length, th: await pjPresThumb(slides[0]) });
+  } catch (e) { pjPresMsg(''); showToast('No se pudo guardar: ' + (e.code || e.message) + ' (revisa las reglas de Firebase)'); return; }
+  PJ_PRES[id] = { s: slides };
+  pjPresIdx[id] = pjPresIdx[id] || { nombre, ts: Date.now(), n: slides.length };
+  pjPresMsg(''); showToast('Presentacion guardada: ' + slides.length + ' diapositivas');
+  pjPresOpen(id);
+}
+function pjPresBorrar(id) {
+  const p = pjPresIdx[id]; if (!p || !confirm('¿Borrar la presentacion "' + p.nombre + '"?')) return;
+  FB.remove(FB.ref(fbDb, 'presentaciones/' + id)).catch(() => {});
+  FB.remove(FB.ref(fbDb, 'presentacionesIdx/' + id)).catch(() => {});
+  delete pjPresIdx[id]; delete PJ_PRES[id]; if (pjPresSel === id) pjPresSel = ''; pjRenderTab();
+}
+
+/* ── pestaña Predica ── */
+(function () {
+  const _rv = pjRenderView;
+  pjRenderView = function () {
+    _rv.apply(this, arguments);
+    const tabs = document.getElementById('pjTabs');
+    if (tabs && !tabs.querySelector('[data-t="predica"]')) {
+      tabs.insertAdjacentHTML('beforeend', `<button data-t="predica" class="${pjTab === 'predica' ? 'on' : ''}" onclick="pjSetTab('predica')">Predica</button>`);
+      if (pjTab === 'predica') pjRenderTab();
+    }
+  };
+  const _rt = pjRenderTab;
+  pjRenderTab = function () {
+    if (pjTab !== 'predica') return _rt.apply(this, arguments);
+    const el = document.getElementById('pjTab'); if (!el) return;
+    pjPresWatch();
+    const ids = Object.keys(pjPresIdx).sort((a, b) => (pjPresIdx[b].ts || 0) - (pjPresIdx[a].ts || 0));
+    let h = `<div class="pj-row" style="margin-top:0;align-items:center;">
+        <label class="btn btn-primary" style="cursor:pointer;">+ Subir presentacion (PDF o imagenes)
+          <input type="file" accept="application/pdf,.pdf,image/*" multiple style="display:none" onchange="pjPresSubir(this)"></label>
+        <span id="pjPresMsg" style="font-size:.85rem;color:var(--text-secondary);"></span></div>
+      <div class="pj-help">En PowerPoint: <b>Archivo › Exportar › Crear PDF</b> y sube ese PDF (o las diapositivas guardadas como imagenes JPG).
+        Queda guardada para siempre. Toca una diapositiva para mostrarla en el data; las flechas y "Siguiente" avanzan.
+        Desde la app <b>Biblia</b>, en el sermon toca <b>📺 Data</b> y cada "DIAPO" del sermon pasa la diapositiva sola.</div>`;
+    if (!ids.length) h += '<div class="pj-help">Todavia no hay presentaciones.</div>';
+    else h += '<div class="pj-plist">' + ids.map(id => { const p = pjPresIdx[id];
+      return `<div class="pj-pitem ${pjPresSel === id ? 'on' : ''}" onclick="pjPresOpen('${id}')">
+        ${p.th ? `<img src="${p.th}" alt="">` : '<div class="ph"></div>'}<div><b>${esc(p.nombre || 'Presentacion')}</b><small>${p.n || '?'} diapositivas</small></div>
+        <span class="x" onclick="event.stopPropagation();pjPresBorrar('${id}')" title="Borrar">&#10005;</span></div>`; }).join('') + '</div>';
+    if (pjPresSel && pjPresIdx[pjPresSel]) {
+      const c = PJ_PRES[pjPresSel];
+      if (!c || !c.s) h += '<div class="pj-help">Cargando diapositivas...</div>';
+      else h += `<div class="pj-h">${esc(pjPresIdx[pjPresSel].nombre)}</div><div class="pj-pgrid">` +
+        c.s.map((s, i) => `<div class="pj-pcard" data-k="${pjPresSel}/${i}" onclick="pjPresGo('${pjPresSel}',${i})"><img src="${s}" alt=""><span>${i + 1}</span></div>`).join('') + '</div>';
+    }
+    el.innerHTML = h;
+    pjPresMark();
+    pjMarkCards(false); pjRenderLive();
+  };
+  const _rl = pjRenderLive;
+  pjRenderLive = function () { _rl.apply(this, arguments); if (pjTab === 'predica') pjPresMark(); };
+})();
+/* si la app Biblia cambia la diapositiva, el iPad del director tambien lo ve */
+(function () {
+  let code = '', un = null;
+  setInterval(() => {
+    if (!fbReady || !fbDb || typeof roomCode === 'undefined') return;
+    if (roomCode === code) return;
+    if (un) { try { un(); } catch (e) {} un = null; }
+    code = roomCode || '';
+    if (!code || (typeof role !== 'undefined' && role !== 'director')) return;
+    un = FB.onValue(FB.ref(fbDb, 'salas/' + code + '/proyector'), s => {
+      const p = s.val();
+      if (!p || p.origen !== 'biblia' || p.v === pjState.v) return;
+      pjState.v = p.v; pjState.modo = p.modo || pjState.modo;
+      if (p.media) pjState.media = p.media;
+      pjRenderLive(); if (pjTab === 'predica') pjPresMark();
+    });
+  }, 1500);
+})();
+</script>
 </body>
 </html>
